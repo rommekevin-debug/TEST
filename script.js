@@ -361,31 +361,37 @@
 
   // ---------- History ----------
   function renderHistory() {
-    const tbody = document.getElementById("tripTableBody");
+    const list = document.getElementById("tripList");
     if (trips.length === 0) {
-      tbody.innerHTML = `<tr class="empty-row"><td colspan="8">Aucun trajet enregistré pour le moment.</td></tr>`;
+      list.innerHTML = `<p class="hint empty-hint">Aucun trajet enregistré pour le moment.</p>`;
     } else {
       const sorted = [...trips].sort((a, b) => (a.date < b.date ? 1 : -1));
-      tbody.innerHTML = sorted
+      list.innerHTML = sorted
         .map((t) => {
-          const balClass = t.balance >= 0 ? "row-balance-pos" : "row-balance-neg";
+          const balClass = t.balance >= 0 ? "" : "negative";
           const stopsList = t.stops || [];
           const route = stopsList.join(" → ") + (t.loopBack ? " → (retour)" : "");
-          return `<tr data-id="${t.id}">
-            <td>${t.date}</td>
-            <td>${escapeHtml(t.label) || "-"}</td>
-            <td>${escapeHtml(route) || "-"}</td>
-            <td>${fmtKm(t.distance)}</td>
-            <td>${fmtEur(t.fuelCost)}</td>
-            <td>${fmtEur(t.reimb)}</td>
-            <td class="${balClass}">${(t.balance >= 0 ? "+" : "") + fmtEur(t.balance)}</td>
-            <td><button class="delete-btn" data-id="${t.id}" title="Supprimer">✕</button></td>
-          </tr>`;
+          return `<div class="trip-card" data-id="${t.id}">
+            <div class="trip-card-top">
+              <div>
+                <div class="trip-card-title">${escapeHtml(t.label) || "Trajet"}</div>
+                <div class="trip-card-date">${t.date}</div>
+              </div>
+              <div class="trip-card-balance ${balClass}">${(t.balance >= 0 ? "+" : "") + fmtEur(t.balance)}</div>
+            </div>
+            <div class="trip-card-route">${escapeHtml(route) || "-"}</div>
+            <div class="trip-card-meta">
+              <span>${fmtKm(t.distance)}</span>
+              <span>${fmtEur(t.fuelCost)} carburant</span>
+              <span>${fmtEur(t.reimb)} indemnité</span>
+            </div>
+            <button class="trip-card-delete" data-id="${t.id}">Supprimer</button>
+          </div>`;
         })
         .join("");
     }
 
-    tbody.querySelectorAll(".delete-btn").forEach((btn) => {
+    list.querySelectorAll(".trip-card-delete").forEach((btn) => {
       btn.addEventListener("click", () => {
         trips = trips.filter((t) => t.id !== btn.dataset.id);
         saveTripsToStorage(trips);
