@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+  <title>KilomPro — Calculateur kilométrique</title>
+  <meta name="theme-color" content="#0f172a">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="app-header">
+    <div class="brand">
+      <span class="brand-icon">🚗</span>
+      <div>
+        <h1>KilomPro</h1>
+        <p>Calculateur de frais kilométriques pour pros itinérants</p>
+      </div>
+    </div>
+    <nav class="tabs" id="tabs">
+      <button class="tab-btn active" data-tab="calc">Calculateur</button>
+      <button class="tab-btn" data-tab="history">Historique</button>
+      <button class="tab-btn" data-tab="settings">Paramètres</button>
+    </nav>
+  </header>
+
+  <main>
+    <!-- CALCULATEUR -->
+    <section id="tab-calc" class="tab-panel active">
+      <div class="card">
+        <h2>Nouveau trajet</h2>
+        <div class="grid">
+          <label class="field">
+            <span>Date</span>
+            <input type="date" id="tripDate">
+          </label>
+          <label class="field">
+            <span>Client / Motif</span>
+            <input type="text" id="tripLabel" placeholder="Ex: Visite client Dupont">
+          </label>
+          <label class="field">
+            <span>Départ</span>
+            <input type="text" id="tripFrom" placeholder="Ville de départ">
+          </label>
+          <label class="field">
+            <span>Arrivée</span>
+            <input type="text" id="tripTo" placeholder="Ville d'arrivée">
+          </label>
+          <label class="field">
+            <span>Distance (km)</span>
+            <input type="number" id="tripDistance" min="0" step="0.1" placeholder="0">
+          </label>
+          <label class="field">
+            <span>Aller-retour ?</span>
+            <select id="tripRoundtrip">
+              <option value="0">Non (aller simple)</option>
+              <option value="1">Oui (x2)</option>
+            </select>
+          </label>
+        </div>
+      </div>
+
+      <div class="card result-card">
+        <h2>Résultat</h2>
+        <div class="result-grid">
+          <div class="result-box">
+            <span class="result-label">Distance totale</span>
+            <span class="result-value" id="resDistance">0 km</span>
+          </div>
+          <div class="result-box cost">
+            <span class="result-label">Coût carburant</span>
+            <span class="result-value" id="resFuelCost">0,00 €</span>
+          </div>
+          <div class="result-box reimb">
+            <span class="result-label">Indemnité employeur</span>
+            <span class="result-value" id="resReimb">0,00 €</span>
+          </div>
+          <div class="result-box balance">
+            <span class="result-label">Solde (indemnité - carburant)</span>
+            <span class="result-value" id="resBalance">0,00 €</span>
+          </div>
+        </div>
+        <p class="hint" id="calcHint"></p>
+        <button class="btn primary" id="saveTrip">💾 Enregistrer ce trajet</button>
+      </div>
+
+      <div class="card">
+        <h2>Paramètres rapides utilisés</h2>
+        <div class="quick-params">
+          <span>⛽ Prix carburant : <strong id="quickFuelPrice">-</strong>/L</span>
+          <span>🚙 Consommation : <strong id="quickConso">-</strong> L/100km</span>
+          <span>💼 Taux indemnisation : <strong id="quickRate">-</strong>/km</span>
+        </div>
+        <a href="#" class="link" id="goSettings">Modifier dans Paramètres →</a>
+      </div>
+    </section>
+
+    <!-- HISTORIQUE -->
+    <section id="tab-history" class="tab-panel">
+      <div class="card">
+        <h2>Synthèse</h2>
+        <div class="summary-grid" id="summaryGrid">
+          <div class="summary-box">
+            <span class="result-label">Trajets</span>
+            <span class="result-value" id="sumCount">0</span>
+          </div>
+          <div class="summary-box">
+            <span class="result-label">Distance totale</span>
+            <span class="result-value" id="sumDistance">0 km</span>
+          </div>
+          <div class="summary-box cost">
+            <span class="result-label">Carburant total</span>
+            <span class="result-value" id="sumFuel">0,00 €</span>
+          </div>
+          <div class="summary-box reimb">
+            <span class="result-label">Indemnités totales</span>
+            <span class="result-value" id="sumReimb">0,00 €</span>
+          </div>
+          <div class="summary-box balance">
+            <span class="result-label">Solde total</span>
+            <span class="result-value" id="sumBalance">0,00 €</span>
+          </div>
+        </div>
+        <div class="actions-row">
+          <button class="btn" id="exportCsv">⬇️ Exporter en CSV</button>
+          <button class="btn danger" id="clearHistory">🗑️ Effacer l'historique</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Trajets enregistrés</h2>
+        <div class="table-wrap">
+          <table id="tripTable">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Client / Motif</th>
+                <th>Trajet</th>
+                <th>Distance</th>
+                <th>Carburant</th>
+                <th>Indemnité</th>
+                <th>Solde</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="tripTableBody">
+              <tr class="empty-row"><td colspan="8">Aucun trajet enregistré pour le moment.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- PARAMETRES -->
+    <section id="tab-settings" class="tab-panel">
+      <div class="card">
+        <h2>⛽ Carburant</h2>
+        <div class="grid">
+          <label class="field">
+            <span>Prix actuel du carburant (€/L)</span>
+            <input type="number" id="fuelPrice" min="0" step="0.001" placeholder="1.850">
+          </label>
+          <label class="field">
+            <span>Type de carburant</span>
+            <select id="fuelType">
+              <option value="diesel">Diesel</option>
+              <option value="sp95">SP95</option>
+              <option value="sp98">SP98</option>
+              <option value="e10">E10</option>
+              <option value="electrique">Électrique (kWh)</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>Consommation moyenne du véhicule (L/100km ou kWh/100km)</span>
+            <input type="number" id="conso" min="0" step="0.1" placeholder="6.5">
+          </label>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>💼 Indemnisation employeur</h2>
+        <div class="grid">
+          <label class="field">
+            <span>Mode de calcul</span>
+            <select id="rateMode">
+              <option value="fixed">Taux fixe (€/km)</option>
+              <option value="baremeFiscal">Barème fiscal (puissance fiscale)</option>
+            </select>
+          </label>
+          <label class="field" id="fixedRateField">
+            <span>Taux d'indemnisation (€/km)</span>
+            <input type="number" id="rate" min="0" step="0.001" placeholder="0.320">
+          </label>
+          <label class="field" id="powerField" style="display:none">
+            <span>Puissance fiscale du véhicule (CV)</span>
+            <select id="fiscalPower">
+              <option value="3">3 CV et moins</option>
+              <option value="4">4 CV</option>
+              <option value="5">5 CV</option>
+              <option value="6">6 CV</option>
+              <option value="7">7 CV et plus</option>
+            </select>
+          </label>
+        </div>
+        <p class="hint">Le barème fiscal utilisé est le barème kilométrique automobile France (indicatif, à vérifier chaque année auprès de l'administration fiscale).</p>
+      </div>
+
+      <div class="card">
+        <h2>👤 Profil</h2>
+        <div class="grid">
+          <label class="field">
+            <span>Nom du véhicule / plaque</span>
+            <input type="text" id="vehicleName" placeholder="Ex: Peugeot 308 - AB-123-CD">
+          </label>
+        </div>
+        <button class="btn primary" id="saveSettings">✅ Enregistrer les paramètres</button>
+        <p class="hint" id="settingsSaved"></p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="app-footer">
+    <p>KilomPro — vos données restent stockées localement sur cet appareil.</p>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>
