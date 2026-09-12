@@ -1,4 +1,4 @@
-const CACHE_NAME = "kilompro-v1";
+const CACHE_NAME = "prokil-v2";
 const APP_SHELL = [
   "./",
   "./index.html",

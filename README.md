@@ -1,4 +1,4 @@
-# KilomPro
+# ProKil
 
 Application web (HTML/CSS/JS, sans dépendance ni serveur) pour les professionnels itinérants qui doivent suivre leurs frais kilométriques.
 

@@ -310,8 +310,13 @@ main {
   justify-content: center;
 }
 
-.stop-row input {
+.stop-input-wrap {
   flex: 1;
+  min-width: 0;
+}
+
+.stop-row input {
+  width: 100%;
   padding: 0.6rem 0.7rem;
   border-radius: 10px;
   border: 1px solid var(--border);
@@ -319,6 +324,32 @@ main {
   color: var(--text);
   font-size: 1rem;
   font-family: inherit;
+}
+
+.address-suggestions {
+  position: absolute;
+  z-index: 1000;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 12px 28px -8px rgba(0,0,0,0.35);
+  overflow: hidden;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.address-suggestion {
+  padding: 0.6rem 0.75rem;
+  font-size: 0.85rem;
+  color: var(--text);
+  cursor: pointer;
+  border-bottom: 1px solid var(--border);
+}
+
+.address-suggestion:last-child { border-bottom: none; }
+
+.address-suggestion:hover {
+  background: var(--surface-2);
 }
 
 .stop-remove {

@@ -3,7 +3,7 @@
     "relation": ["delegate_permission/common.handle_all_urls"],
     "target": {
       "namespace": "android_app",
-      "package_name": "com.kilompro.app",
+      "package_name": "com.prokil.app",
       "sha256_cert_fingerprints": [
         "REMPLACE_MOI_PAR_LEMPREINTE_SHA256_DE_TA_CLE_DE_SIGNATURE"
       ]

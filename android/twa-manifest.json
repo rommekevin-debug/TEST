@@ -1,8 +1,8 @@
 {
-  "packageId": "com.kilompro.app",
+  "packageId": "com.prokil.app",
   "host": "rommekevin-debug.github.io",
-  "name": "KilomPro",
-  "launcherName": "KilomPro",
+  "name": "ProKil",
+  "launcherName": "ProKil",
   "display": "standalone",
   "orientation": "portrait",
   "themeColor": "#171f33",
@@ -36,6 +36,6 @@
   "fallbackType": "customtabs",
   "signingKey": {
     "path": "./android.keystore",
-    "alias": "kilompro"
+    "alias": "prokil"
   }
 }

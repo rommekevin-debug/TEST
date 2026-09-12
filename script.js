@@ -171,7 +171,9 @@
       .map(
         (s, i) => `<div class="stop-row" data-id="${s.id}">
           <span class="stop-index">${i + 1}</span>
-          <input type="text" data-id="${s.id}" placeholder="${stopPlaceholder(i, stops.length)}" value="${escapeAttr(s.value)}">
+          <div class="stop-input-wrap">
+            <input type="text" autocomplete="off" data-id="${s.id}" placeholder="${stopPlaceholder(i, stops.length)}" value="${escapeAttr(s.value)}">
+          </div>
           ${stops.length > 2 && i > 0 && i < stops.length - 1 ? `<button type="button" class="stop-remove" data-id="${s.id}" title="Supprimer cette étape">✕</button>` : ""}
         </div>`
       )
@@ -180,8 +182,16 @@
     list.querySelectorAll("input").forEach((input) => {
       input.addEventListener("input", () => {
         const stop = stops.find((s) => s.id === input.dataset.id);
-        if (stop) stop.value = input.value;
+        if (stop) {
+          stop.value = input.value;
+          delete stop.lat;
+          delete stop.lon;
+        }
         clearAutoStatus();
+        scheduleAddressSuggestions(input, stop);
+      });
+      input.addEventListener("blur", () => {
+        setTimeout(hideSuggestions, 150); // laisse le temps au clic sur une suggestion de s'exécuter
       });
     });
     list.querySelectorAll(".stop-remove").forEach((btn) => {
@@ -191,6 +201,72 @@
       });
     });
   }
+
+  // ---------- Suggestions d'adresse ----------
+  let suggestionsTimer = null;
+  let suggestionsRequestId = 0;
+  const suggestionsBox = document.createElement("div");
+  suggestionsBox.className = "address-suggestions";
+  suggestionsBox.hidden = true;
+  document.body.appendChild(suggestionsBox);
+
+  function hideSuggestions() {
+    suggestionsBox.hidden = true;
+    suggestionsBox.innerHTML = "";
+  }
+
+  function scheduleAddressSuggestions(input, stop) {
+    clearTimeout(suggestionsTimer);
+    const query = input.value.trim();
+    if (query.length < 3) {
+      hideSuggestions();
+      return;
+    }
+    suggestionsTimer = setTimeout(() => fetchAddressSuggestions(input, stop, query), 400);
+  }
+
+  async function fetchAddressSuggestions(input, stop, query) {
+    const requestId = ++suggestionsRequestId;
+    try {
+      const url = `https://nominatim.openstreetmap.org/search?format=json&limit=5&addressdetails=0&accept-language=fr&q=${encodeURIComponent(query)}`;
+      const res = await fetch(url, { headers: { Accept: "application/json" } });
+      if (requestId !== suggestionsRequestId) return; // une saisie plus récente a pris le relais
+      if (!res.ok) return hideSuggestions();
+      const data = await res.json();
+      if (requestId !== suggestionsRequestId) return;
+      if (!data.length) return hideSuggestions();
+      renderSuggestions(input, stop, data);
+    } catch {
+      hideSuggestions();
+    }
+  }
+
+  function renderSuggestions(input, stop, results) {
+    const rect = input.getBoundingClientRect();
+    suggestionsBox.style.left = `${rect.left + window.scrollX}px`;
+    suggestionsBox.style.top = `${rect.bottom + window.scrollY + 4}px`;
+    suggestionsBox.style.width = `${rect.width}px`;
+    suggestionsBox.innerHTML = results
+      .map((r, i) => `<div class="address-suggestion" data-index="${i}">${escapeHtml(r.display_name)}</div>`)
+      .join("");
+    suggestionsBox.hidden = false;
+
+    suggestionsBox.querySelectorAll(".address-suggestion").forEach((el, i) => {
+      // mousedown (avant le blur de l'input) pour que le clic soit bien pris en compte
+      el.addEventListener("mousedown", (e) => {
+        e.preventDefault();
+        const r = results[i];
+        input.value = r.display_name;
+        stop.value = r.display_name;
+        stop.lat = parseFloat(r.lat);
+        stop.lon = parseFloat(r.lon);
+        hideSuggestions();
+      });
+    });
+  }
+
+  document.addEventListener("scroll", hideSuggestions, true);
+  window.addEventListener("resize", hideSuggestions);
 
   function escapeAttr(str) {
     return String(str || "").replace(/"/g, "&quot;");
@@ -223,12 +299,17 @@
     return { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon) };
   }
 
-  async function geocodeAll(addresses, onProgress) {
+  async function geocodeAll(stopsList, onProgress) {
     const coords = [];
-    for (let i = 0; i < addresses.length; i++) {
-      onProgress(i + 1, addresses.length);
-      coords.push(await geocodeAddress(addresses[i]));
-      if (i < addresses.length - 1) await sleep(1100);
+    for (let i = 0; i < stopsList.length; i++) {
+      const s = stopsList[i];
+      onProgress(i + 1, stopsList.length);
+      if (typeof s.lat === "number" && typeof s.lon === "number") {
+        coords.push({ lat: s.lat, lon: s.lon }); // déjà connu via une suggestion choisie
+        continue;
+      }
+      coords.push(await geocodeAddress(s.value.trim()));
+      if (i < stopsList.length - 1) await sleep(1100);
     }
     return coords;
   }
@@ -244,16 +325,16 @@
   }
 
   document.getElementById("autoCalc").addEventListener("click", async () => {
-    const addresses = stops.map((s) => s.value.trim()).filter(Boolean);
-    if (addresses.length < 2) {
+    const activeStops = stops.filter((s) => s.value.trim());
+    if (activeStops.length < 2) {
       setAutoStatus("Renseigne au moins une adresse de départ et une adresse d'arrivée.", true);
       return;
     }
-    const routeAddresses = calcEls.loopBack.checked ? [...addresses, addresses[0]] : addresses;
+    const routeStops = calcEls.loopBack.checked ? [...activeStops, activeStops[0]] : activeStops;
     const btn = document.getElementById("autoCalc");
     btn.disabled = true;
     try {
-      const coords = await geocodeAll(routeAddresses, (i, n) =>
+      const coords = await geocodeAll(routeStops, (i, n) =>
         setAutoStatus(`Géocodage de l'adresse ${i}/${n}...`)
       );
       setAutoStatus("Calcul de l'itinéraire...");
@@ -454,7 +535,7 @@
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `kilompro_trajets_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.download = `prokil_trajets_${new Date().toISOString().slice(0, 10)}.csv`;
     document.body.appendChild(a);
     a.click();
     a.remove();

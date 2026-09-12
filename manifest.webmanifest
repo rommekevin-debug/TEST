@@ -1,6 +1,6 @@
 {
-  "name": "KilomPro — Calculateur kilométrique",
-  "short_name": "KilomPro",
+  "name": "ProKil — Calculateur kilométrique",
+  "short_name": "ProKil",
   "description": "Calculateur de frais kilométriques, carburant et indemnisation employeur pour professionnels itinérants.",
   "start_url": "./index.html",
   "scope": "./",

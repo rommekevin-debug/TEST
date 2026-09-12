@@ -1,20 +1,20 @@
 # Fiche Google Play — texte prêt à copier
 
 ## Titre (30 caractères max)
-KilomPro
+ProKil
 
 ## Description courte (80 caractères max)
 Frais kilométriques, carburant et indemnités pour pros itinérants
 
 ## Description complète
 
-KilomPro est le compagnon des commerciaux, techniciens et professionnels itinérants qui multiplient les rendez-vous sur la route.
+ProKil est le compagnon des commerciaux, techniciens et professionnels itinérants qui multiplient les rendez-vous sur la route.
 
 🗺️ TOURNÉES MULTI-ÉTAPES
-Ajoute chaque client à visiter et laisse KilomPro calculer automatiquement la distance réelle de ta tournée complète, avec ou sans retour au point de départ.
+Ajoute chaque client à visiter et laisse ProKil calculer automatiquement la distance réelle de ta tournée complète, avec ou sans retour au point de départ.
 
 ⛽ COÛT CARBURANT EN TEMPS RÉEL
-Renseigne le prix actuel du carburant et la consommation de ton véhicule : KilomPro calcule le coût réel de chaque trajet.
+Renseigne le prix actuel du carburant et la consommation de ton véhicule : ProKil calcule le coût réel de chaque trajet.
 
 💼 INDEMNISATION EMPLOYEUR
 Configure ton taux d'indemnisation kilométrique (taux fixe ou barème fiscal selon la puissance de ton véhicule) et compare-le instantanément à ton coût réel.
