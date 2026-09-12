@@ -461,6 +461,13 @@
     URL.revokeObjectURL(url);
   });
 
+  // ---------- PWA ----------
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("service-worker.js").catch(() => {});
+    });
+  }
+
   // ---------- Init ----------
   function init() {
     calcEls.date.value = new Date().toISOString().slice(0, 10);
