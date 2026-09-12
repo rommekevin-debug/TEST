@@ -145,11 +145,131 @@
   const calcEls = {
     date: document.getElementById("tripDate"),
     label: document.getElementById("tripLabel"),
-    from: document.getElementById("tripFrom"),
-    to: document.getElementById("tripTo"),
     distance: document.getElementById("tripDistance"),
-    roundtrip: document.getElementById("tripRoundtrip"),
+    loopBack: document.getElementById("loopBack"),
   };
+
+  // ---------- Stops (tournée) ----------
+  let stops = [
+    { id: cryptoId(), value: "" },
+    { id: cryptoId(), value: "" },
+  ];
+
+  function cryptoId() {
+    return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+  }
+
+  function stopPlaceholder(index, total) {
+    if (index === 0) return "Adresse de départ";
+    if (index === total - 1) return "Adresse d'arrivée (dernier client)";
+    return `Étape ${index} — adresse client`;
+  }
+
+  function renderStops() {
+    const list = document.getElementById("stopsList");
+    list.innerHTML = stops
+      .map(
+        (s, i) => `<div class="stop-row" data-id="${s.id}">
+          <span class="stop-index">${i + 1}</span>
+          <input type="text" data-id="${s.id}" placeholder="${stopPlaceholder(i, stops.length)}" value="${escapeAttr(s.value)}">
+          ${stops.length > 2 && i > 0 && i < stops.length - 1 ? `<button type="button" class="stop-remove" data-id="${s.id}" title="Supprimer cette étape">✕</button>` : ""}
+        </div>`
+      )
+      .join("");
+
+    list.querySelectorAll("input").forEach((input) => {
+      input.addEventListener("input", () => {
+        const stop = stops.find((s) => s.id === input.dataset.id);
+        if (stop) stop.value = input.value;
+        clearAutoStatus();
+      });
+    });
+    list.querySelectorAll(".stop-remove").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        stops = stops.filter((s) => s.id !== btn.dataset.id);
+        renderStops();
+      });
+    });
+  }
+
+  function escapeAttr(str) {
+    return String(str || "").replace(/"/g, "&quot;");
+  }
+
+  document.getElementById("addStop").addEventListener("click", () => {
+    stops.splice(stops.length - 1, 0, { id: cryptoId(), value: "" });
+    renderStops();
+  });
+
+  function setAutoStatus(msg, isError) {
+    const el = document.getElementById("autoCalcStatus");
+    el.textContent = msg;
+    el.style.color = isError ? "var(--danger)" : "";
+  }
+  function clearAutoStatus() {
+    setAutoStatus("", false);
+  }
+
+  function sleep(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  async function geocodeAddress(address) {
+    const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(address)}`;
+    const res = await fetch(url, { headers: { Accept: "application/json" } });
+    if (!res.ok) throw new Error("geocoding_failed");
+    const data = await res.json();
+    if (!data.length) throw new Error(`Adresse introuvable : "${address}"`);
+    return { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon) };
+  }
+
+  async function geocodeAll(addresses, onProgress) {
+    const coords = [];
+    for (let i = 0; i < addresses.length; i++) {
+      onProgress(i + 1, addresses.length);
+      coords.push(await geocodeAddress(addresses[i]));
+      if (i < addresses.length - 1) await sleep(1100);
+    }
+    return coords;
+  }
+
+  async function computeRouteDistanceKm(coords) {
+    const coordStr = coords.map((c) => `${c.lon},${c.lat}`).join(";");
+    const url = `https://router.project-osrm.org/route/v1/driving/${coordStr}?overview=false`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error("routing_failed");
+    const data = await res.json();
+    if (data.code !== "Ok" || !data.routes || !data.routes.length) throw new Error("no_route");
+    return data.routes[0].distance / 1000;
+  }
+
+  document.getElementById("autoCalc").addEventListener("click", async () => {
+    const addresses = stops.map((s) => s.value.trim()).filter(Boolean);
+    if (addresses.length < 2) {
+      setAutoStatus("Renseigne au moins une adresse de départ et une adresse d'arrivée.", true);
+      return;
+    }
+    const routeAddresses = calcEls.loopBack.checked ? [...addresses, addresses[0]] : addresses;
+    const btn = document.getElementById("autoCalc");
+    btn.disabled = true;
+    try {
+      const coords = await geocodeAll(routeAddresses, (i, n) =>
+        setAutoStatus(`Géocodage de l'adresse ${i}/${n}...`)
+      );
+      setAutoStatus("Calcul de l'itinéraire...");
+      const km = await computeRouteDistanceKm(coords);
+      calcEls.distance.value = km.toFixed(1);
+      computeCurrent();
+      setAutoStatus(`Distance calculée automatiquement : ${km.toFixed(1)} km ✅`);
+    } catch (err) {
+      setAutoStatus(
+        `Calcul automatique impossible (${err.message || "connexion indisponible"}). Tu peux saisir la distance manuellement ci-dessous.`,
+        true
+      );
+    } finally {
+      btn.disabled = false;
+    }
+  });
 
   function getYear(dateStr) {
     const d = dateStr ? new Date(dateStr) : new Date();
@@ -174,8 +294,7 @@
   }
 
   function computeCurrent() {
-    const base = parseFloat(calcEls.distance.value) || 0;
-    const distance = calcEls.roundtrip.value === "1" ? base * 2 : base;
+    const distance = parseFloat(calcEls.distance.value) || 0;
     const fuelCost = distance * (settings.conso / 100) * settings.fuelPrice;
     const reimb = computeReimbursement(distance, calcEls.date.value);
     const balance = reimb - fuelCost;
@@ -199,24 +318,23 @@
 
   ["input", "change"].forEach((evt) => {
     calcEls.distance.addEventListener(evt, computeCurrent);
-    calcEls.roundtrip.addEventListener(evt, computeCurrent);
     calcEls.date.addEventListener(evt, computeCurrent);
   });
 
   document.getElementById("saveTrip").addEventListener("click", () => {
-    const base = parseFloat(calcEls.distance.value) || 0;
-    if (base <= 0) {
-      alert("Merci d'indiquer une distance valide.");
+    const distanceVal = parseFloat(calcEls.distance.value) || 0;
+    if (distanceVal <= 0) {
+      alert("Merci d'indiquer une distance valide (saisie manuelle ou calcul automatique).");
       return;
     }
     const { distance, fuelCost, reimb, balance } = computeCurrent();
+    const addresses = stops.map((s) => s.value.trim()).filter(Boolean);
     const trip = {
-      id: Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
+      id: cryptoId(),
       date: calcEls.date.value || new Date().toISOString().slice(0, 10),
       label: calcEls.label.value.trim(),
-      from: calcEls.from.value.trim(),
-      to: calcEls.to.value.trim(),
-      roundtrip: calcEls.roundtrip.value === "1",
+      stops: addresses,
+      loopBack: calcEls.loopBack.checked,
       distance,
       fuelCost,
       reimb,
@@ -231,10 +349,11 @@
     saveTripsToStorage(trips);
 
     calcEls.label.value = "";
-    calcEls.from.value = "";
-    calcEls.to.value = "";
     calcEls.distance.value = "";
-    calcEls.roundtrip.value = "0";
+    calcEls.loopBack.checked = false;
+    stops = [{ id: cryptoId(), value: "" }, { id: cryptoId(), value: "" }];
+    renderStops();
+    clearAutoStatus();
     computeCurrent();
 
     switchTab("history");
@@ -250,7 +369,8 @@
       tbody.innerHTML = sorted
         .map((t) => {
           const balClass = t.balance >= 0 ? "row-balance-pos" : "row-balance-neg";
-          const route = [t.from, t.to].filter(Boolean).join(" → ") + (t.roundtrip ? " (A/R)" : "");
+          const stopsList = t.stops || [];
+          const route = stopsList.join(" → ") + (t.loopBack ? " → (retour)" : "");
           return `<tr data-id="${t.id}">
             <td>${t.date}</td>
             <td>${escapeHtml(t.label) || "-"}</td>
@@ -308,15 +428,14 @@
       alert("Aucun trajet à exporter.");
       return;
     }
-    const header = ["Date", "Client/Motif", "Depart", "Arrivee", "Aller-retour", "Distance (km)", "Cout carburant (EUR)", "Indemnite (EUR)", "Solde (EUR)"];
+    const header = ["Date", "Client/Motif", "Itineraire", "Retour au depart", "Distance (km)", "Cout carburant (EUR)", "Indemnite (EUR)", "Solde (EUR)"];
     const rows = [...trips]
       .sort((a, b) => (a.date < b.date ? -1 : 1))
       .map((t) => [
         t.date,
         t.label,
-        t.from,
-        t.to,
-        t.roundtrip ? "Oui" : "Non",
+        (t.stops || []).join(" -> "),
+        t.loopBack ? "Oui" : "Non",
         t.distance.toFixed(1),
         t.fuelCost.toFixed(2),
         t.reimb.toFixed(2),
@@ -341,6 +460,7 @@
     calcEls.date.value = new Date().toISOString().slice(0, 10);
     populateSettingsForm();
     updateQuickParams();
+    renderStops();
     computeCurrent();
     renderHistory();
   }

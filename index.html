@@ -35,26 +35,32 @@
           </label>
           <label class="field">
             <span>Client / Motif</span>
-            <input type="text" id="tripLabel" placeholder="Ex: Visite client Dupont">
+            <input type="text" id="tripLabel" placeholder="Ex: Tournée secteur Nord">
           </label>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>🗺️ Étapes de la tournée</h2>
+        <p class="hint">Ajoute une étape par client à visiter : la distance de l'itinéraire complet est calculée automatiquement.</p>
+        <div id="stopsList"></div>
+        <div class="actions-row">
+          <button type="button" class="btn" id="addStop">+ Ajouter une étape</button>
+        </div>
+        <label class="field field-inline">
+          <input type="checkbox" id="loopBack">
+          <span>Retour au point de départ après la tournée</span>
+        </label>
+        <button type="button" class="btn primary" id="autoCalc">🧭 Calculer automatiquement la distance</button>
+        <p class="hint" id="autoCalcStatus"></p>
+      </div>
+
+      <div class="card">
+        <h2>Distance</h2>
+        <div class="grid">
           <label class="field">
-            <span>Départ</span>
-            <input type="text" id="tripFrom" placeholder="Ville de départ">
-          </label>
-          <label class="field">
-            <span>Arrivée</span>
-            <input type="text" id="tripTo" placeholder="Ville d'arrivée">
-          </label>
-          <label class="field">
-            <span>Distance (km)</span>
-            <input type="number" id="tripDistance" min="0" step="0.1" placeholder="0">
-          </label>
-          <label class="field">
-            <span>Aller-retour ?</span>
-            <select id="tripRoundtrip">
-              <option value="0">Non (aller simple)</option>
-              <option value="1">Oui (x2)</option>
-            </select>
+            <span>Distance totale (km)</span>
+            <input type="number" id="tripDistance" min="0" step="0.1" placeholder="Calculée automatiquement, ou saisie manuelle">
           </label>
         </div>
       </div>
@@ -220,6 +226,7 @@
 
   <footer class="app-footer">
     <p>KilomPro — vos données restent stockées localement sur cet appareil.</p>
+    <p>Calcul d'itinéraire : géocodage © contributeurs OpenStreetMap (Nominatim) · routage OSRM.</p>
   </footer>
 
   <script src="script.js"></script>
