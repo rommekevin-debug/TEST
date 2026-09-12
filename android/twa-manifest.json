@@ -1,0 +1,41 @@
+{
+  "packageId": "com.kilompro.app",
+  "host": "rommekevin-debug.github.io",
+  "name": "KilomPro",
+  "launcherName": "KilomPro",
+  "display": "standalone",
+  "orientation": "portrait",
+  "themeColor": "#171f33",
+  "themeColorDark": "#171f33",
+  "navigationColor": "#171f33",
+  "navigationColorDark": "#171f33",
+  "backgroundColor": "#f9f6f0",
+  "backgroundColorDark": "#171f33",
+  "enableNotifications": false,
+  "startUrl": "/TEST/index.html",
+  "webManifestUrl": "https://rommekevin-debug.github.io/TEST/manifest.webmanifest",
+  "fullScopeUrl": "https://rommekevin-debug.github.io/TEST/",
+  "iconUrl": "https://rommekevin-debug.github.io/TEST/icons/icon-512.png",
+  "maskableIconUrl": "https://rommekevin-debug.github.io/TEST/icons/maskable-512.png",
+  "shortcuts": [],
+  "generatorApp": "manual",
+  "minSdkVersion": 21,
+  "appVersion": "1.0.0",
+  "appVersionCode": 1,
+  "features": {
+    "locationDelegation": {
+      "enabled": false
+    }
+  },
+  "alphaDependencies": {
+    "enabled": false
+  },
+  "enableSiteSettingsShortcut": true,
+  "isChromeOSOnly": false,
+  "isMetaQuest": false,
+  "fallbackType": "customtabs",
+  "signingKey": {
+    "path": "./android.keystore",
+    "alias": "kilompro"
+  }
+}
