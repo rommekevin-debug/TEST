@@ -162,6 +162,16 @@
       </div>
 
       <div class="card">
+        <h2>Rapport mensuel</h2>
+        <div id="monthlyChart" class="chart-area"></div>
+        <div class="chart-legend">
+          <span class="chart-legend-item"><span class="chart-swatch positive"></span>Solde positif</span>
+          <span class="chart-legend-item"><span class="chart-swatch negative"></span>Solde négatif</span>
+        </div>
+        <div id="monthlyList" class="month-list"></div>
+      </div>
+
+      <div class="card">
         <h2>Trajets enregistrés</h2>
         <div id="tripList" class="trip-list">
           <p class="hint empty-hint">Aucun trajet enregistré pour le moment.</p>
@@ -220,7 +230,27 @@
             </select>
           </label>
         </div>
-        <p class="hint">Le barème fiscal utilisé est le barème kilométrique automobile France (indicatif, à vérifier chaque année auprès de l'administration fiscale).</p>
+
+        <div id="baremeTableField" style="display:none">
+          <p class="hint" style="margin-top:1rem;">Barème fiscal personnalisable (indicatif) — modifie les coefficients si le barème officiel change, sans attendre une mise à jour de l'appli.</p>
+          <div class="table-wrap">
+            <table class="bareme-table" id="baremeTable">
+              <thead>
+                <tr>
+                  <th>CV</th>
+                  <th>≤ 5000 km (a)</th>
+                  <th>5001-20000 km (b)</th>
+                  <th>Constante (c)</th>
+                  <th>&gt; 20000 km (d)</th>
+                </tr>
+              </thead>
+              <tbody id="baremeTableBody"></tbody>
+            </table>
+          </div>
+          <button type="button" class="btn" id="resetBareme">Réinitialiser aux valeurs par défaut</button>
+        </div>
+
+        <p class="hint">Le barème fiscal utilisé est indicatif (barème kilométrique automobile France) — vérifie et ajuste les coefficients ci-dessus chaque année auprès de l'administration fiscale.</p>
       </div>
 
       <div class="card">
@@ -236,6 +266,7 @@
           Enregistrer les paramètres
         </button>
         <p class="hint" id="settingsSaved"></p>
+        <a href="#" class="link" id="replayOnboarding" style="display:inline-block;margin-top:0.75rem;">Revoir la présentation de l'appli →</a>
       </div>
     </section>
   </main>
@@ -244,6 +275,17 @@
     <p>ProKil — vos données restent stockées localement sur cet appareil.</p>
     <p>Calcul d'itinéraire : géocodage © contributeurs OpenStreetMap (Nominatim) · routage OSRM.</p>
   </footer>
+
+  <div id="onboarding" class="onboarding-overlay" hidden>
+    <div class="onboarding-card">
+      <div id="onboardingIcon" class="onboarding-icon"></div>
+      <h2 id="onboardingTitle" class="onboarding-title"></h2>
+      <p id="onboardingText" class="onboarding-text"></p>
+      <div class="onboarding-dots" id="onboardingDots"></div>
+      <button type="button" class="btn primary" id="onboardingNext"></button>
+      <button type="button" class="onboarding-skip" id="onboardingSkip">Passer</button>
+    </div>
+  </div>
 
   <script src="script.js"></script>
 </body>

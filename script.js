@@ -24,8 +24,8 @@
     "7": { a: 0.697, b: 0.394, c: 1515, d: 0.470 },
   };
 
-  function baremeCumulativeAmount(cv, km) {
-    const t = BAREME[cv] || BAREME["5"];
+  function baremeCumulativeAmount(cv, km, table) {
+    const t = (table || BAREME)[cv] || BAREME["5"];
     if (km <= 0) return 0;
     if (km <= 5000) return km * t.a;
     if (km <= 20000) return km * t.b + t.c;
@@ -92,7 +92,43 @@
     vehicleName: document.getElementById("vehicleName"),
     fixedRateField: document.getElementById("fixedRateField"),
     powerField: document.getElementById("powerField"),
+    baremeTableField: document.getElementById("baremeTableField"),
+    baremeTableBody: document.getElementById("baremeTableBody"),
   };
+
+  const BAREME_CVS = ["3", "4", "5", "6", "7"];
+  const BAREME_CV_LABEL = { 3: "3 et -", 4: "4", 5: "5", 6: "6", 7: "7 et +" };
+
+  function renderBaremeTable(table) {
+    els.baremeTableBody.innerHTML = BAREME_CVS.map((cv) => {
+      const t = table[cv];
+      return `<tr data-cv="${cv}">
+        <td>${BAREME_CV_LABEL[cv]}</td>
+        <td><input type="number" step="0.001" data-field="a" value="${t.a}"></td>
+        <td><input type="number" step="0.001" data-field="b" value="${t.b}"></td>
+        <td><input type="number" step="1" data-field="c" value="${t.c}"></td>
+        <td><input type="number" step="0.001" data-field="d" value="${t.d}"></td>
+      </tr>`;
+    }).join("");
+  }
+
+  function readBaremeTable() {
+    const table = {};
+    els.baremeTableBody.querySelectorAll("tr").forEach((row) => {
+      const cv = row.dataset.cv;
+      table[cv] = {
+        a: parseFloat(row.querySelector('[data-field="a"]').value) || 0,
+        b: parseFloat(row.querySelector('[data-field="b"]').value) || 0,
+        c: parseFloat(row.querySelector('[data-field="c"]').value) || 0,
+        d: parseFloat(row.querySelector('[data-field="d"]').value) || 0,
+      };
+    });
+    return table;
+  }
+
+  document.getElementById("resetBareme").addEventListener("click", () => {
+    renderBaremeTable(BAREME);
+  });
 
   function populateSettingsForm() {
     els.fuelPrice.value = settings.fuelPrice;
@@ -102,6 +138,7 @@
     els.rate.value = settings.rate;
     els.fiscalPower.value = settings.fiscalPower;
     els.vehicleName.value = settings.vehicleName;
+    renderBaremeTable(settings.bareme || BAREME);
     toggleRateFields();
   }
 
@@ -109,6 +146,7 @@
     const isFixed = els.rateMode.value === "fixed";
     els.fixedRateField.style.display = isFixed ? "" : "none";
     els.powerField.style.display = isFixed ? "none" : "";
+    els.baremeTableField.style.display = isFixed ? "none" : "";
   }
 
   els.rateMode.addEventListener("change", toggleRateFields);
@@ -122,6 +160,7 @@
       rate: parseFloat(els.rate.value) || 0,
       fiscalPower: els.fiscalPower.value,
       vehicleName: els.vehicleName.value.trim(),
+      bareme: readBaremeTable(),
     };
     saveSettingsToStorage(settings);
     const msg = document.getElementById("settingsSaved");
@@ -342,6 +381,10 @@
       calcEls.distance.value = km.toFixed(1);
       computeCurrent();
       setAutoStatus(`Distance calculée automatiquement : ${km.toFixed(1)} km ✅`);
+      const resultCard = document.querySelector(".result-card");
+      resultCard.classList.remove("pulse");
+      void resultCard.offsetWidth; // relance l'animation même si elle vient de jouer
+      resultCard.classList.add("pulse");
     } catch (err) {
       setAutoStatus(
         `Calcul automatique impossible (${err.message || "connexion indisponible"}). Tu peux saisir la distance manuellement ci-dessous.`,
@@ -369,8 +412,9 @@
     }
     const year = getYear(dateStr);
     const priorKm = kmDoneThisYearBefore(year);
-    const before = baremeCumulativeAmount(settings.fiscalPower, priorKm);
-    const after = baremeCumulativeAmount(settings.fiscalPower, priorKm + distance);
+    const table = settings.bareme || BAREME;
+    const before = baremeCumulativeAmount(settings.fiscalPower, priorKm, table);
+    const after = baremeCumulativeAmount(settings.fiscalPower, priorKm + distance, table);
     return Math.max(0, after - before);
   }
 
@@ -492,6 +536,71 @@
     const sumBalBox = document.getElementById("sumBalance");
     sumBalBox.textContent = (totalBalance >= 0 ? "+" : "") + fmtEur(totalBalance);
     sumBalBox.closest(".summary-box").classList.toggle("negative", totalBalance < 0);
+
+    renderMonthlyReport();
+  }
+
+  // ---------- Rapport mensuel ----------
+  function getMonthlyStats(limit) {
+    const map = new Map();
+    trips.forEach((t) => {
+      const key = (t.date || "").slice(0, 7);
+      if (!key) return;
+      if (!map.has(key)) map.set(key, { key, count: 0, distance: 0, fuelCost: 0, reimb: 0, balance: 0 });
+      const m = map.get(key);
+      m.count += 1;
+      m.distance += t.distance;
+      m.fuelCost += t.fuelCost;
+      m.reimb += t.reimb;
+      m.balance += t.balance;
+    });
+    const arr = Array.from(map.values()).sort((a, b) => (a.key < b.key ? -1 : 1));
+    return limit ? arr.slice(-limit) : arr;
+  }
+
+  function monthLabel(key) {
+    const [y, m] = key.split("-").map(Number);
+    return new Date(y, m - 1, 1).toLocaleDateString("fr-FR", { month: "short", year: "2-digit" });
+  }
+
+  function renderMonthlyReport() {
+    const chart = document.getElementById("monthlyChart");
+    const list = document.getElementById("monthlyList");
+    const stats = getMonthlyStats(6);
+
+    if (!stats.length) {
+      chart.innerHTML = "";
+      list.innerHTML = `<p class="hint empty-hint">Pas encore assez de trajets pour un rapport mensuel.</p>`;
+      return;
+    }
+
+    const maxAbs = Math.max(1, ...stats.map((s) => Math.abs(s.balance)));
+    chart.innerHTML = stats
+      .map((s) => {
+        const h = Math.max(2, Math.round((Math.abs(s.balance) / maxAbs) * 56));
+        const positive = s.balance >= 0;
+        return `<div class="chart-col">
+          <div class="chart-half top">${positive ? `<div class="chart-bar positive" style="height:${h}px"></div>` : ""}</div>
+          <div class="chart-half bottom">${!positive ? `<div class="chart-bar negative" style="height:${h}px"></div>` : ""}</div>
+          <div class="chart-value">${(s.balance >= 0 ? "+" : "") + fmtEur(s.balance)}</div>
+          <div class="chart-monthlabel">${monthLabel(s.key)}</div>
+        </div>`;
+      })
+      .join("");
+
+    list.innerHTML = [...stats]
+      .reverse()
+      .map((s) => {
+        const cls = s.balance >= 0 ? "" : "negative";
+        return `<div class="month-row">
+          <div class="month-row-top">
+            <span class="month-row-label">${monthLabel(s.key)}</span>
+            <span class="month-row-balance ${cls}">${(s.balance >= 0 ? "+" : "") + fmtEur(s.balance)}</span>
+          </div>
+          <div class="month-row-meta">${s.count} trajet${s.count > 1 ? "s" : ""} · ${fmtKm(s.distance)} · ${fmtEur(s.fuelCost)} carburant · ${fmtEur(s.reimb)} indemnité</div>
+        </div>`;
+      })
+      .join("");
   }
 
   function escapeHtml(str) {
@@ -542,6 +651,80 @@
     URL.revokeObjectURL(url);
   });
 
+  // ---------- Onboarding ----------
+  const ONBOARDING_KEY = "prokil_onboarded_v1";
+  const ROUTE_ICON =
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 15.3l1.4-4.2a2 2 0 011.9-1.3h8.4a2 2 0 011.9 1.3l1.4 4.2"/><path d="M3 15.3h18v2.2a.8.8 0 01-.8.8h-1.2a.8.8 0 01-.8-.8v-.7H5.8v.7a.8.8 0 01-.8.8H3.8a.8.8 0 01-.8-.8v-2.2z"/><circle cx="7.2" cy="15.3" r="1.3"/><circle cx="16.8" cy="15.3" r="1.3"/><path d="M2 20h20" stroke-dasharray="2.4 2.4"/></svg>';
+  const STOPS_ICON =
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="19" r="2.2"/><circle cx="18" cy="5" r="2.2"/><path d="M8 19h7a3 3 0 003-3v-1a3 3 0 00-3-3H9a3 3 0 01-3-3v-1a3 3 0 013-3h7"/></svg>';
+  const WALLET_ICON =
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"/><circle cx="16" cy="13.5" r="1.6"/></svg>';
+
+  const onboardingSteps = [
+    {
+      icon: ROUTE_ICON,
+      title: "Bienvenue sur ProKil",
+      text: "Calcule tes frais kilométriques en tournée : carburant, indemnité employeur et solde, en quelques secondes.",
+    },
+    {
+      icon: STOPS_ICON,
+      title: "Ajoute tes étapes",
+      text: "Saisis les adresses de tes clients (avec suggestions automatiques) et calcule la distance réelle de ta tournée en un tap.",
+    },
+    {
+      icon: WALLET_ICON,
+      title: "Configure tes paramètres",
+      text: "Renseigne le prix du carburant, la consommation de ton véhicule et ton taux d'indemnisation dans l'onglet Paramètres.",
+    },
+  ];
+  let onboardingStep = 0;
+
+  const onboardingEls = {
+    overlay: document.getElementById("onboarding"),
+    icon: document.getElementById("onboardingIcon"),
+    title: document.getElementById("onboardingTitle"),
+    text: document.getElementById("onboardingText"),
+    dots: document.getElementById("onboardingDots"),
+    next: document.getElementById("onboardingNext"),
+    skip: document.getElementById("onboardingSkip"),
+  };
+
+  function renderOnboardingStep() {
+    const s = onboardingSteps[onboardingStep];
+    onboardingEls.icon.innerHTML = s.icon;
+    onboardingEls.title.textContent = s.title;
+    onboardingEls.text.textContent = s.text;
+    onboardingEls.dots.innerHTML = onboardingSteps
+      .map((_, i) => `<span class="onboarding-dot${i === onboardingStep ? " active" : ""}"></span>`)
+      .join("");
+    onboardingEls.next.textContent = onboardingStep === onboardingSteps.length - 1 ? "Commencer" : "Suivant";
+  }
+
+  function showOnboarding() {
+    onboardingStep = 0;
+    renderOnboardingStep();
+    onboardingEls.overlay.hidden = false;
+  }
+
+  function hideOnboarding() {
+    onboardingEls.overlay.hidden = true;
+    localStorage.setItem(ONBOARDING_KEY, "1");
+  }
+
+  onboardingEls.next.addEventListener("click", () => {
+    if (onboardingStep < onboardingSteps.length - 1) {
+      onboardingStep += 1;
+      renderOnboardingStep();
+    } else {
+      hideOnboarding();
+    }
+  });
+  onboardingEls.skip.addEventListener("click", hideOnboarding);
+  document.getElementById("replayOnboarding").addEventListener("click", (e) => {
+    e.preventDefault();
+    showOnboarding();
+  });
+
   // ---------- PWA ----------
   if ("serviceWorker" in navigator) {
     window.addEventListener("load", () => {
@@ -557,6 +740,7 @@
     renderStops();
     computeCurrent();
     renderHistory();
+    if (!localStorage.getItem(ONBOARDING_KEY)) showOnboarding();
   }
 
   init();
