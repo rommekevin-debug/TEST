@@ -244,6 +244,7 @@
   // ---------- Suggestions d'adresse ----------
   let suggestionsTimer = null;
   let suggestionsRequestId = 0;
+  let suggestionsController = null;
   const suggestionsBox = document.createElement("div");
   suggestionsBox.className = "address-suggestions";
   suggestionsBox.hidden = true;
@@ -256,37 +257,52 @@
 
   function scheduleAddressSuggestions(input, stop) {
     clearTimeout(suggestionsTimer);
+    if (suggestionsController) suggestionsController.abort();
     const query = input.value.trim();
     if (query.length < 3) {
       hideSuggestions();
       return;
     }
-    suggestionsTimer = setTimeout(() => fetchAddressSuggestions(input, stop, query), 400);
+    suggestionsTimer = setTimeout(() => fetchAddressSuggestions(input, stop, query), 200);
+  }
+
+  // Construit un libellé court (numéro + rue, code postal + ville) à partir
+  // des champs structurés Nominatim, sans département/région/pays.
+  function formatShortAddress(item) {
+    const a = item.address || {};
+    const streetPart = [a.house_number, a.road].filter(Boolean).join(" ");
+    const city = a.city || a.town || a.village || a.municipality || a.suburb || "";
+    const cityPart = [a.postcode, city].filter(Boolean).join(" ");
+    const parts = [streetPart, cityPart].filter(Boolean);
+    if (parts.length) return parts.join(", ");
+    return (a.name || item.display_name || "").split(",").slice(0, 2).join(",").trim();
   }
 
   async function fetchAddressSuggestions(input, stop, query) {
     const requestId = ++suggestionsRequestId;
+    suggestionsController = new AbortController();
     try {
-      const url = `https://nominatim.openstreetmap.org/search?format=json&limit=5&addressdetails=0&accept-language=fr&q=${encodeURIComponent(query)}`;
-      const res = await fetch(url, { headers: { Accept: "application/json" } });
+      const url = `https://nominatim.openstreetmap.org/search?format=json&limit=5&addressdetails=1&accept-language=fr&q=${encodeURIComponent(query)}`;
+      const res = await fetch(url, { headers: { Accept: "application/json" }, signal: suggestionsController.signal });
       if (requestId !== suggestionsRequestId) return; // une saisie plus récente a pris le relais
       if (!res.ok) return hideSuggestions();
       const data = await res.json();
       if (requestId !== suggestionsRequestId) return;
       if (!data.length) return hideSuggestions();
       renderSuggestions(input, stop, data);
-    } catch {
-      hideSuggestions();
+    } catch (err) {
+      if (err.name !== "AbortError") hideSuggestions();
     }
   }
 
   function renderSuggestions(input, stop, results) {
+    const labels = results.map(formatShortAddress);
     const rect = input.getBoundingClientRect();
     suggestionsBox.style.left = `${rect.left + window.scrollX}px`;
     suggestionsBox.style.top = `${rect.bottom + window.scrollY + 4}px`;
     suggestionsBox.style.width = `${rect.width}px`;
-    suggestionsBox.innerHTML = results
-      .map((r, i) => `<div class="address-suggestion" data-index="${i}">${escapeHtml(r.display_name)}</div>`)
+    suggestionsBox.innerHTML = labels
+      .map((label, i) => `<div class="address-suggestion" data-index="${i}">${escapeHtml(label)}</div>`)
       .join("");
     suggestionsBox.hidden = false;
 
@@ -295,8 +311,9 @@
       el.addEventListener("mousedown", (e) => {
         e.preventDefault();
         const r = results[i];
-        input.value = r.display_name;
-        stop.value = r.display_name;
+        const label = labels[i];
+        input.value = label;
+        stop.value = label;
         stop.lat = parseFloat(r.lat);
         stop.lon = parseFloat(r.lon);
         hideSuggestions();
