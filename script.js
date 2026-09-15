@@ -278,16 +278,41 @@
     return (a.name || item.display_name || "").split(",").slice(0, 2).join(",").trim();
   }
 
+  // Recherche structurée quand un code postal français (5 chiffres) est repérable dans la
+  // saisie : Nominatim filtre alors beaucoup plus précisément (utile pour les rues au nom
+  // courant qui existent dans plusieurs communes, ex. "Allée des Platanes").
+  function buildSuggestionParams(query) {
+    const postcodeMatch = query.match(/\b(\d{5})\b/);
+    const base = { format: "json", limit: "5", addressdetails: "1", "accept-language": "fr", countrycodes: "fr" };
+    if (postcodeMatch) {
+      const street = query.replace(postcodeMatch[0], "").trim();
+      return { ...base, postalcode: postcodeMatch[1], street: street || query };
+    }
+    return { ...base, q: query };
+  }
+
+  async function nominatimSearch(paramsObj, signal) {
+    const params = new URLSearchParams(paramsObj);
+    const res = await fetch(`https://nominatim.openstreetmap.org/search?${params.toString()}`, {
+      headers: { Accept: "application/json" },
+      signal,
+    });
+    if (!res.ok) throw new Error("suggest_failed");
+    return res.json();
+  }
+
   async function fetchAddressSuggestions(input, stop, query) {
     const requestId = ++suggestionsRequestId;
     suggestionsController = new AbortController();
+    const signal = suggestionsController.signal;
     try {
-      const url = `https://nominatim.openstreetmap.org/search?format=json&limit=5&addressdetails=1&accept-language=fr&q=${encodeURIComponent(query)}`;
-      const res = await fetch(url, { headers: { Accept: "application/json" }, signal: suggestionsController.signal });
+      let data = await nominatimSearch(buildSuggestionParams(query), signal);
       if (requestId !== suggestionsRequestId) return; // une saisie plus récente a pris le relais
-      if (!res.ok) return hideSuggestions();
-      const data = await res.json();
-      if (requestId !== suggestionsRequestId) return;
+      if (!data.length) {
+        // repli en recherche libre si la recherche structurée (code postal + rue) ne trouve rien
+        data = await nominatimSearch({ format: "json", limit: "5", addressdetails: "1", "accept-language": "fr", countrycodes: "fr", q: query }, signal);
+        if (requestId !== suggestionsRequestId) return;
+      }
       if (!data.length) return hideSuggestions();
       renderSuggestions(input, stop, data);
     } catch (err) {
