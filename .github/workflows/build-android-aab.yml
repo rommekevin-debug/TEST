@@ -8,6 +8,13 @@ on:
 jobs:
   build-aab:
     runs-on: ubuntu-latest
+    # Le runner GitHub a son propre Android SDK préinstallé ; on force les
+    # deux variables à pointer vers celui que Bubblewrap installe lui-même,
+    # pour éviter le conflit "Several environment variables ... contain
+    # different paths to the SDK".
+    env:
+      ANDROID_HOME: /home/runner/.bubblewrap/android_sdk
+      ANDROID_SDK_ROOT: /home/runner/.bubblewrap/android_sdk
     steps:
       - uses: actions/checkout@v4
 
