@@ -1,12 +1,8 @@
-[
-  {
-    "relation": ["delegate_permission/common.handle_all_urls"],
-    "target": {
-      "namespace": "android_app",
-      "package_name": "com.prokil.app",
-      "sha256_cert_fingerprints": [
-        "REMPLACE_MOI_PAR_LEMPREINTE_SHA256_DE_TA_CLE_DE_SIGNATURE"
-      ]
-    }
+[{
+  "relation": ["delegate_permission/common.handle_all_urls"],
+  "target": {
+    "namespace": "android_app",
+    "package_name": "com.prokil.app",
+    "sha256_cert_fingerprints": ["A2:3C:AA:66:90:74:7D:11:85:67:8D:C0:BE:1B:0E:DF:DB:C6:C0:64:59:93:72:9C:DF:D3:AD:9E:B9:D1:8C:58"]
   }
-]
+}]
