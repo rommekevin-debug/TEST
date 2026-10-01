@@ -19,14 +19,17 @@ Renseigne le prix actuel du carburant et la consommation de ton véhicule : ProK
 💼 INDEMNISATION EMPLOYEUR
 Configure ton taux d'indemnisation kilométrique (taux fixe ou barème fiscal selon la puissance de ton véhicule) et compare-le instantanément à ton coût réel.
 
-📊 HISTORIQUE ET EXPORT
-Retrouve tous tes trajets, les totaux de la période, et exporte tout en CSV pour tes notes de frais.
+📊 HISTORIQUE, EXPORT CSV ET PDF
+Retrouve tous tes trajets, les totaux de la période, et exporte une note de frais prête à l'emploi en CSV ou en PDF.
+
+🚗 MULTI-VÉHICULES ET EMPREINTE CO2
+Gère plusieurs véhicules avec leur propre consommation, duplique un trajet récurrent en un clic, et suis l'empreinte CO2 de tes déplacements.
 
 🔒 DONNÉES 100% LOCALES
 Aucune création de compte, aucune donnée personnelle envoyée à un serveur : tout reste stocké sur ton appareil.
 
 ⭐ PROKIL PRO (OPTIONNEL)
-L'appli est gratuite et pleinement utilisable sans payer. Pour aller plus loin, ProKil Pro (essai gratuit de 3 jours) débloque l'historique illimité, le rapport mensuel avec graphique, et le barème fiscal personnalisable.
+L'appli est gratuite et pleinement utilisable sans payer. Pour aller plus loin, ProKil Pro (essai gratuit de 3 jours) débloque l'historique illimité, le rapport mensuel avec graphique, le barème fiscal personnalisable, le multi-véhicules illimité et le comparatif de rentabilité par client.
 
 ## Catégorie
 Productivité / Entreprise
