@@ -34,7 +34,11 @@ L'appli est gratuite et pleinement utilisable sans payer. Pour aller plus loin, 
 ## Catégorie
 Productivité / Entreprise
 
-## Éléments graphiques nécessaires (à préparer séparément)
-- Icône de l'appli : 512×512 px (voir `icons/icon-512.png`)
-- Image de présentation (feature graphic) : 1024×500 px
-- Captures d'écran : au moins 2, format téléphone (recommandé 1080×1920 px ou similaire)
+## Éléments graphiques
+
+Tout est prêt dans `android/store-assets/` :
+- Icône de l'appli : 512×512 px (`icons/icon-512.png`)
+- Image de présentation (feature graphic, 1024×500 px) : `store-assets/feature-graphic.png`
+- Captures d'écran (1080×2400 px, format téléphone) : `store-assets/screenshot-1-calculateur.png`, `screenshot-2-historique.png`, `screenshot-3-comparatif.png`, `screenshot-4-tickets.png`, `screenshot-5-parametres.png`
+
+Ces captures ont été générées avec des données d'exemple pour illustrer l'appli ; si tu veux des captures 100% fidèles à ton rendu final (polices Archivo Black / Barlow), tu peux aussi refaire tes propres captures directement depuis le site en ligne avant de les uploader sur la Play Console — les fichiers fournis restent utilisables tels quels.
