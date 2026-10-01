@@ -49,6 +49,12 @@ jobs:
           yes y | bubblewrap update --manifest ./twa-manifest.json --skipVersionUpgrade
           ls -la
 
+      - name: Ajouter mavenCentral() en secours des dépôts Gradle
+        working-directory: android
+        run: |
+          sed -i 's/jcenter()/jcenter()\n        mavenCentral()/' build.gradle
+          cat build.gradle
+
       - name: Accepter les licences du SDK Android
         run: |
           SDKMGR="$ANDROID_HOME/bin/sdkmanager"
