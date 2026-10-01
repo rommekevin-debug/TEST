@@ -25,6 +25,9 @@ Retrouve tous tes trajets, les totaux de la période, et exporte tout en CSV pou
 🔒 DONNÉES 100% LOCALES
 Aucune création de compte, aucune donnée personnelle envoyée à un serveur : tout reste stocké sur ton appareil.
 
+⭐ PROKIL PRO (OPTIONNEL)
+L'appli est gratuite et pleinement utilisable sans payer. Pour aller plus loin, ProKil Pro (essai gratuit de 3 jours) débloque l'historique illimité, le rapport mensuel avec graphique, et le barème fiscal personnalisable.
+
 ## Catégorie
 Productivité / Entreprise
 

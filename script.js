@@ -66,6 +66,98 @@
   const fmtKm = (n) =>
     (isFinite(n) ? n : 0).toLocaleString("fr-FR", { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + " km";
 
+  // ---------- ProKil Pro (abonnement Play Billing, essai 3 jours) ----------
+  // Produit à créer dans la Google Play Console : abonnement "prokil_pro_monthly"
+  // avec une période d'essai gratuite de 3 jours. Fonctionne uniquement dans
+  // l'app Android (TWA) — dans un navigateur classique, l'offre reste visible
+  // mais indique qu'elle n'est disponible que via l'app Android.
+  const PRO_SKU = "prokil_pro_monthly";
+  const FREE_HISTORY_LIMIT = 15;
+  let digitalGoodsService = null;
+  let isPremium = false;
+
+  async function initBilling() {
+    const startBtn = document.getElementById("startProTrial");
+    if (!("getDigitalGoodsService" in window)) {
+      document.getElementById("proUnavailableHint").hidden = false;
+      startBtn.disabled = true;
+      updateProUI();
+      return;
+    }
+    try {
+      digitalGoodsService = await window.getDigitalGoodsService("https://play.google.com/billing");
+      const details = await digitalGoodsService.getDetails([PRO_SKU]);
+      if (details && details[0]) {
+        document.getElementById("proPriceHint").textContent =
+          `${details[0].price.value} ${details[0].price.currency} / mois après l'essai de 3 jours — annulable à tout moment depuis Google Play.`;
+      }
+      await refreshProStatus();
+    } catch {
+      digitalGoodsService = null;
+      document.getElementById("proUnavailableHint").hidden = false;
+      startBtn.disabled = true;
+      updateProUI();
+    }
+  }
+
+  async function refreshProStatus() {
+    if (!digitalGoodsService) {
+      updateProUI();
+      return;
+    }
+    try {
+      const purchases = await digitalGoodsService.listPurchases();
+      isPremium = purchases.some((p) => p.itemId === PRO_SKU);
+    } catch {
+      isPremium = false;
+    }
+    updateProUI();
+  }
+
+  function updateProUI() {
+    document.getElementById("proStatusFree").hidden = isPremium;
+    document.getElementById("proStatusActive").hidden = !isPremium;
+
+    document.getElementById("monthlyReportLock").hidden = isPremium;
+    document.getElementById("monthlyChart").classList.toggle("locked", !isPremium);
+    document.getElementById("monthlyList").classList.toggle("locked", !isPremium);
+
+    document.getElementById("baremeLock").hidden = isPremium;
+    document.getElementById("baremeTableWrap").classList.toggle("locked", !isPremium);
+    document.getElementById("resetBareme").disabled = !isPremium;
+
+    renderHistory();
+  }
+
+  async function startProPurchase() {
+    if (!digitalGoodsService || !("PaymentRequest" in window)) {
+      alert("L'abonnement ProKil Pro est disponible depuis l'application Android ProKil (Google Play).");
+      return;
+    }
+    try {
+      const request = new PaymentRequest(
+        [{ supportedMethods: "https://play.google.com/billing", data: { sku: PRO_SKU } }],
+        { total: { label: "ProKil Pro", amount: { currency: "EUR", value: "0" } } }
+      );
+      const response = await request.show();
+      await response.complete("success");
+      await refreshProStatus();
+    } catch (err) {
+      if (err && err.name !== "AbortError") {
+        alert("Le paiement n'a pas pu aboutir. Réessaie depuis l'application Android.");
+      }
+    }
+  }
+
+  document.getElementById("startProTrial").addEventListener("click", startProPurchase);
+  document.querySelectorAll(".pro-lock-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll(".tab-btn").forEach((b) => b.classList.toggle("active", b.dataset.tab === "settings"));
+      document.querySelectorAll(".tab-panel").forEach((p) => p.classList.toggle("active", p.id === "tab-settings"));
+      document.getElementById("proCard").scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  });
+
   // ---------- Tabs ----------
   document.querySelectorAll(".tab-btn").forEach((btn) => {
     btn.addEventListener("click", () => switchTab(btn.dataset.tab));
@@ -454,7 +546,7 @@
     }
     const year = getYear(dateStr);
     const priorKm = kmDoneThisYearBefore(year);
-    const table = settings.bareme || BAREME;
+    const table = (isPremium && settings.bareme) || BAREME;
     const before = baremeCumulativeAmount(settings.fiscalPower, priorKm, table);
     const after = baremeCumulativeAmount(settings.fiscalPower, priorKm + distance, table);
     return Math.max(0, after - before);
@@ -529,11 +621,19 @@
   // ---------- History ----------
   function renderHistory() {
     const list = document.getElementById("tripList");
+    const limitNotice = document.getElementById("historyLimitNotice");
     if (trips.length === 0) {
       list.innerHTML = `<p class="hint empty-hint">Aucun trajet enregistré pour le moment.</p>`;
+      limitNotice.hidden = true;
     } else {
       const sorted = [...trips].sort((a, b) => (a.date < b.date ? 1 : -1));
-      list.innerHTML = sorted
+      const hiddenCount = isPremium ? 0 : Math.max(0, sorted.length - FREE_HISTORY_LIMIT);
+      const visible = isPremium ? sorted : sorted.slice(0, FREE_HISTORY_LIMIT);
+      limitNotice.hidden = hiddenCount === 0;
+      if (hiddenCount > 0) {
+        limitNotice.innerHTML = `<span class="pro-pill">PRO</span>${hiddenCount} trajet${hiddenCount > 1 ? "s" : ""} plus ancien${hiddenCount > 1 ? "s" : ""} masqué${hiddenCount > 1 ? "s" : ""} — passe à ProKil Pro pour un historique illimité.`;
+      }
+      list.innerHTML = visible
         .map((t) => {
           const balClass = t.balance >= 0 ? "" : "negative";
           const stopsList = t.stops || [];
@@ -781,7 +881,8 @@
     updateQuickParams();
     renderStops();
     computeCurrent();
-    renderHistory();
+    updateProUI();
+    initBilling();
     if (!localStorage.getItem(ONBOARDING_KEY)) showOnboarding();
   }
 

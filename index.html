@@ -161,18 +161,23 @@
         </div>
       </div>
 
-      <div class="card">
-        <h2>Rapport mensuel</h2>
+      <div class="card" id="monthlyReportCard">
+        <h2><span class="pro-pill">PRO</span>Rapport mensuel</h2>
         <div id="monthlyChart" class="chart-area"></div>
         <div class="chart-legend">
           <span class="chart-legend-item"><span class="chart-swatch positive"></span>Solde positif</span>
           <span class="chart-legend-item"><span class="chart-swatch negative"></span>Solde négatif</span>
         </div>
         <div id="monthlyList" class="month-list"></div>
+        <div class="pro-lock" id="monthlyReportLock" hidden>
+          <p class="hint">Le graphique et le détail mensuel sont réservés à ProKil Pro.</p>
+          <button type="button" class="btn primary pro-lock-btn">Débloquer ProKil Pro</button>
+        </div>
       </div>
 
       <div class="card">
         <h2>Trajets enregistrés</h2>
+        <p class="hint" id="historyLimitNotice" hidden></p>
         <div id="tripList" class="trip-list">
           <p class="hint empty-hint">Aucun trajet enregistré pour le moment.</p>
         </div>
@@ -181,6 +186,24 @@
 
     <!-- PARAMETRES -->
     <section id="tab-settings" class="tab-panel">
+      <div class="card pro-card" id="proCard">
+        <h2>ProKil Pro</h2>
+        <div id="proStatusFree">
+          <p class="hint">Historique illimité, rapport mensuel avec graphique, barème fiscal personnalisable.</p>
+          <ul class="pro-benefits">
+            <li>Historique de trajets illimité (gratuit : 15 derniers trajets)</li>
+            <li>Rapport mensuel avec graphique de solde</li>
+            <li>Barème fiscal personnalisable</li>
+          </ul>
+          <button type="button" class="btn primary" id="startProTrial">Essayer 3 jours gratuits</button>
+          <p class="hint" id="proPriceHint"></p>
+          <p class="hint" id="proUnavailableHint" hidden>L'abonnement ProKil Pro est disponible depuis l'application Android ProKil (Google Play).</p>
+        </div>
+        <div id="proStatusActive" hidden>
+          <p class="hint">✅ ProKil Pro est actif sur cet appareil. Merci pour ton soutien !</p>
+        </div>
+      </div>
+
       <div class="card">
         <h2><svg class="icon-inline" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 21V8a2 2 0 012-2h6a2 2 0 012 2v13M4 21h10m4-9V6a1 1 0 00-.3-.7l-2-2M18 12h1a2 2 0 012 2v3.5a1.5 1.5 0 01-3 0V15"/><path d="M4 12h8"/></svg>Carburant</h2>
         <div class="grid">
@@ -232,8 +255,8 @@
         </div>
 
         <div id="baremeTableField" style="display:none">
-          <p class="hint" style="margin-top:1rem;">Barème fiscal personnalisable (indicatif) — modifie les coefficients si le barème officiel change, sans attendre une mise à jour de l'appli.</p>
-          <div class="table-wrap">
+          <p class="hint" style="margin-top:1rem;"><span class="pro-pill">PRO</span>Barème fiscal personnalisable (indicatif) — modifie les coefficients si le barème officiel change, sans attendre une mise à jour de l'appli.</p>
+          <div class="table-wrap" id="baremeTableWrap">
             <table class="bareme-table" id="baremeTable">
               <thead>
                 <tr>
@@ -248,6 +271,10 @@
             </table>
           </div>
           <button type="button" class="btn" id="resetBareme">Réinitialiser aux valeurs par défaut</button>
+          <div class="pro-lock" id="baremeLock" hidden>
+            <p class="hint">Personnaliser le barème est réservé à ProKil Pro. Le barème par défaut reste appliqué.</p>
+            <button type="button" class="btn primary pro-lock-btn">Débloquer ProKil Pro</button>
+          </div>
         </div>
 
         <p class="hint">Le barème fiscal utilisé est indicatif (barème kilométrique automobile France) — vérifie et ajuste les coefficients ci-dessus chaque année auprès de l'administration fiscale.</p>

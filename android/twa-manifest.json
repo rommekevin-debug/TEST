@@ -25,6 +25,9 @@
   "features": {
     "locationDelegation": {
       "enabled": false
+    },
+    "playBilling": {
+      "enabled": true
     }
   },
   "alphaDependencies": {

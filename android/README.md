@@ -47,13 +47,23 @@ bubblewrap build
 
 Ça produit un fichier `app-release-bundle.aab`, signé avec ta clé — c'est le fichier à uploader sur le Play Store.
 
-## 6. Créer la fiche et publier sur Google Play Console
+## 6. Configurer l'abonnement ProKil Pro (Play Billing)
+
+L'appli propose un abonnement "ProKil Pro" (historique illimité, rapport mensuel, barème fiscal personnalisable) avec 3 jours d'essai gratuit, géré nativement par Google Play — aucun serveur à toi n'est impliqué, Google gère le paiement et la facturation.
+
+1. `twa-manifest.json` a déjà la fonctionnalité `playBilling` activée — elle installe le pont entre le site web (API [Digital Goods](https://developer.chrome.com/docs/android/trusted-web-activity/play-billing)) et Play Billing dans le projet Android généré par Bubblewrap.
+2. Dans la Play Console, va dans **Monétiser → Produits → Abonnements** et crée un abonnement avec l'ID produit **`prokil_pro_monthly`** (cet identifiant est déjà câblé dans `script.js` — si tu en choisis un autre, remplace la constante `PRO_SKU` dans ce fichier).
+3. Fixe le prix mensuel de ton choix, puis ajoute une **offre avec période d'essai gratuite de 3 jours** (Play Console : section "Offres" de l'abonnement → "Ajouter une offre" → phase d'essai gratuit, durée 3 jours).
+4. Pour que le paiement fonctionne, l'appli doit être publiée au moins en **test interne** sur Play Console — l'API Play Billing ne répond pas tant que l'app n'est pas reconnue par le Store (y compris lors de tes propres tests).
+5. L'abonnement n'est disponible que dans l'app Android installée depuis le Play Store — dans un navigateur classique (ou l'aperçu web), ProKil affiche un message indiquant que l'achat se fait via l'app Android, et le reste de l'appli fonctionne normalement en version gratuite.
+
+## 7. Créer la fiche et publier sur Google Play Console
 
 1. Crée une nouvelle application dans la [Play Console](https://play.google.com/console).
 2. Renseigne la fiche store (voir `store-listing.md` dans ce dossier pour un texte prêt à copier).
 3. Ajoute la politique de confidentialité (voir `privacy-policy.md`, à héberger quelque part en public — par exemple comme page GitHub Pages, `https://rommekevin-debug.github.io/TEST/privacy.html`).
-4. Uploade le fichier `.aab` dans la section "Production" (ou "Test interne" pour tester d'abord).
-5. Remplis le questionnaire de classification de contenu et les informations de confidentialité des données (ProKil ne collecte et n'envoie aucune donnée personnelle à un serveur — tout reste en local sur l'appareil, hormis les adresses saisies qui sont envoyées à OpenStreetMap/OSRM pour le calcul d'itinéraire).
+4. Uploade le fichier `.aab` dans la section "Production" (ou "Test interne" pour tester d'abord, **recommandé** pour valider l'achat d'abonnement avant publication publique).
+5. Remplis le questionnaire de classification de contenu et les informations de confidentialité des données (ProKil ne collecte et n'envoie aucune donnée personnelle à un serveur — tout reste en local sur l'appareil, hormis les adresses saisies qui sont envoyées à OpenStreetMap/OSRM pour le calcul d'itinéraire, et les informations de paiement de l'abonnement qui sont gérées directement par Google Play).
 6. Soumets pour validation (délai habituel : quelques heures à quelques jours).
 
 ## Mettre à jour l'appli plus tard
