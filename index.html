@@ -12,6 +12,7 @@
   <link rel="apple-touch-icon" href="icons/icon-192.png">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Barlow:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js" defer></script>
 </head>
 <body>
   <header class="app-header">
@@ -95,6 +96,10 @@
         <p class="hint">Joins une photo du ticket de caisse pour garder une preuve avec ce trajet, consultable dans l'onglet Tickets.</p>
         <div id="receiptPreviewWrap" hidden>
           <img id="receiptPreview" class="receipt-preview" alt="Aperçu du ticket">
+          <label class="field">
+            <span>Montant payé (€) <span id="receiptOcrStatus" class="receipt-ocr-status"></span></span>
+            <input type="number" id="receiptAmount" min="0" step="0.01" placeholder="Détecté automatiquement, ou saisis-le">
+          </label>
           <button type="button" class="btn danger" id="removeReceipt">Retirer la photo</button>
         </div>
         <button type="button" class="btn dashed" id="addReceiptBtn">
