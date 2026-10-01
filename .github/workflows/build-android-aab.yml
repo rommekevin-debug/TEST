@@ -69,6 +69,25 @@ jobs:
           BUBBLEWRAP_KEY_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
         run: bubblewrap build --manifest ./twa-manifest.json
 
+      - name: Générer assetlinks.json (empreinte SHA-256 de la clé)
+        working-directory: android
+        run: |
+          FINGERPRINT=$(keytool -list -v -keystore android.keystore -alias prokil \
+            -storepass "${{ secrets.KEYSTORE_PASSWORD }}" \
+            | grep "SHA256:" | sed 's/.*SHA256: //')
+          echo "Empreinte SHA-256 : $FINGERPRINT"
+          cat > assetlinks.json <<EOF
+          [{
+            "relation": ["delegate_permission/common.handle_all_urls"],
+            "target": {
+              "namespace": "android_app",
+              "package_name": "com.prokil.app",
+              "sha256_cert_fingerprints": ["$FINGERPRINT"]
+            }
+          }]
+          EOF
+          cat assetlinks.json
+
       - name: Publier les fichiers générés
         uses: actions/upload-artifact@v4
         with:
@@ -76,5 +95,6 @@ jobs:
           path: |
             android/app-release-bundle.aab
             android/android.keystore
+            android/assetlinks.json
           retention-days: 30
           if-no-files-found: warn
