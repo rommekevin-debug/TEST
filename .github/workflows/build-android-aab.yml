@@ -36,13 +36,10 @@ jobs:
               -dname "CN=ProKil, OU=Engineering, O=ProKil, L=Paris, S=IDF, C=FR"
           fi
 
-      - name: Initialiser le projet Android (Bubblewrap)
+      - name: Générer le projet Android depuis twa-manifest.json
         working-directory: android
-        env:
-          BUBBLEWRAP_KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          BUBBLEWRAP_KEY_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
         run: |
-          yes y | bubblewrap init --manifest ./twa-manifest.json --skipPwaValidation
+          yes y | bubblewrap update --manifest ./twa-manifest.json --skipVersionUpgrade
           ls -la
 
       - name: Construire l'App Bundle (.aab)
@@ -50,7 +47,7 @@ jobs:
         env:
           BUBBLEWRAP_KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           BUBBLEWRAP_KEY_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-        run: bubblewrap build --skipPwaValidation
+        run: bubblewrap build --manifest ./twa-manifest.json
 
       - name: Publier les fichiers générés
         uses: actions/upload-artifact@v4

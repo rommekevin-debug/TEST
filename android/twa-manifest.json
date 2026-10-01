@@ -11,7 +11,7 @@
   "navigationColorDark": "#131212",
   "backgroundColor": "#131212",
   "backgroundColorDark": "#131212",
-  "enableNotifications": false,
+  "enableNotifications": true,
   "startUrl": "/TEST/index.html",
   "webManifestUrl": "https://rommekevin-debug.github.io/TEST/manifest.webmanifest",
   "fullScopeUrl": "https://rommekevin-debug.github.io/TEST/",
