@@ -1,3 +1,10 @@
+// ---------- PWA ----------
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("service-worker.js").catch(() => {});
+  });
+}
+
 (() => {
   "use strict";
 
@@ -1317,13 +1324,6 @@
     e.preventDefault();
     showOnboarding();
   });
-
-  // ---------- PWA ----------
-  if ("serviceWorker" in navigator) {
-    window.addEventListener("load", () => {
-      navigator.serviceWorker.register("service-worker.js").catch(() => {});
-    });
-  }
 
   // ---------- Init ----------
   function init() {
