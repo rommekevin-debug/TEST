@@ -33,6 +33,7 @@
     <nav class="tabs" id="tabs">
       <button class="tab-btn active" data-tab="calc">Calculateur</button>
       <button class="tab-btn" data-tab="history">Historique</button>
+      <button class="tab-btn" data-tab="tickets">Tickets</button>
       <button class="tab-btn" data-tab="settings">Paramètres</button>
     </nav>
   </header>
@@ -87,6 +88,21 @@
             <input type="number" id="tripDistance" min="0" step="0.1" placeholder="Calculée automatiquement, ou saisie manuelle">
           </label>
         </div>
+      </div>
+
+      <div class="card">
+        <h2><svg class="icon-inline" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h3l2-3h6l2 3h3a1 1 0 011 1v11a1 1 0 01-1 1H4a1 1 0 01-1-1V8a1 1 0 011-1z"/><circle cx="12" cy="13" r="3.5"/></svg>Ticket de carburant (optionnel)</h2>
+        <p class="hint">Joins une photo du ticket de caisse pour garder une preuve avec ce trajet, consultable dans l'onglet Tickets.</p>
+        <div id="receiptPreviewWrap" hidden>
+          <img id="receiptPreview" class="receipt-preview" alt="Aperçu du ticket">
+          <button type="button" class="btn danger" id="removeReceipt">Retirer la photo</button>
+        </div>
+        <button type="button" class="btn dashed" id="addReceiptBtn">
+          <svg class="icon-inline" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h3l2-3h6l2 3h3a1 1 0 011 1v11a1 1 0 01-1 1H4a1 1 0 01-1-1V8a1 1 0 011-1z"/><circle cx="12" cy="13" r="3.5"/></svg>
+          Prendre / ajouter une photo
+        </button>
+        <input type="file" id="receiptInput" accept="image/*" capture="environment" hidden>
+        <p class="hint" id="receiptStatus"></p>
       </div>
 
       <div class="card result-card">
@@ -210,6 +226,17 @@
       </div>
     </section>
 
+    <!-- TICKETS -->
+    <section id="tab-tickets" class="tab-panel">
+      <div class="card">
+        <h2>Tickets enregistrés</h2>
+        <p class="hint">Toutes les photos de tickets de carburant jointes à tes trajets.</p>
+        <div id="ticketGrid" class="ticket-grid">
+          <p class="hint empty-hint">Aucun ticket enregistré pour le moment.</p>
+        </div>
+      </div>
+    </section>
+
     <!-- PARAMETRES -->
     <section id="tab-settings" class="tab-panel">
       <div class="card pro-card" id="proCard">
@@ -326,6 +353,17 @@
   </footer>
 
   <div id="printReport" class="print-only"></div>
+
+  <div id="ticketViewer" class="ticket-viewer" hidden>
+    <div class="ticket-viewer-card">
+      <img id="ticketViewerImg" alt="Ticket de carburant">
+      <div id="ticketViewerInfo" class="hint"></div>
+      <div class="actions-row">
+        <button type="button" class="btn danger" id="ticketViewerDelete">Supprimer ce ticket</button>
+        <button type="button" class="btn" id="ticketViewerClose">Fermer</button>
+      </div>
+    </div>
+  </div>
 
   <div id="onboarding" class="onboarding-overlay" hidden>
     <div class="onboarding-card">

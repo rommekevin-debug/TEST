@@ -97,7 +97,12 @@
   }
 
   function saveTripsToStorage(trips) {
-    localStorage.setItem(STORAGE_TRIPS, JSON.stringify(trips));
+    try {
+      localStorage.setItem(STORAGE_TRIPS, JSON.stringify(trips));
+      return true;
+    } catch {
+      return false; // probablement le quota de stockage dépassé (souvent à cause des photos de tickets)
+    }
   }
 
   let settings = loadSettings();
@@ -221,6 +226,7 @@
     document.querySelectorAll(".tab-btn").forEach((b) => b.classList.toggle("active", b.dataset.tab === tab));
     document.querySelectorAll(".tab-panel").forEach((p) => p.classList.toggle("active", p.id === `tab-${tab}`));
     if (tab === "history") renderHistory();
+    if (tab === "tickets") renderTicketGrid();
   }
 
   // ---------- Settings form ----------
@@ -733,6 +739,73 @@
   });
   document.getElementById("tripVehicle").addEventListener("change", computeCurrent);
 
+  // ---------- Ticket de carburant (photo) ----------
+  let pendingReceipt = null;
+
+  function compressImageFile(file, maxDim, quality) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const img = new Image();
+        img.onload = () => {
+          let { width, height } = img;
+          if (width > maxDim || height > maxDim) {
+            if (width > height) {
+              height = Math.round(height * (maxDim / width));
+              width = maxDim;
+            } else {
+              width = Math.round(width * (maxDim / height));
+              height = maxDim;
+            }
+          }
+          const canvas = document.createElement("canvas");
+          canvas.width = width;
+          canvas.height = height;
+          canvas.getContext("2d").drawImage(img, 0, 0, width, height);
+          resolve(canvas.toDataURL("image/jpeg", quality));
+        };
+        img.onerror = reject;
+        img.src = reader.result;
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
+
+  function showReceiptPreview(dataUrl) {
+    document.getElementById("receiptPreview").src = dataUrl;
+    document.getElementById("receiptPreviewWrap").hidden = false;
+    document.getElementById("addReceiptBtn").hidden = true;
+  }
+
+  function clearReceiptPreview() {
+    pendingReceipt = null;
+    document.getElementById("receiptPreviewWrap").hidden = true;
+    document.getElementById("addReceiptBtn").hidden = false;
+    document.getElementById("receiptInput").value = "";
+    document.getElementById("receiptStatus").textContent = "";
+  }
+
+  document.getElementById("addReceiptBtn").addEventListener("click", () => {
+    document.getElementById("receiptInput").click();
+  });
+
+  document.getElementById("receiptInput").addEventListener("change", async (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    const statusEl = document.getElementById("receiptStatus");
+    statusEl.textContent = "Traitement de la photo...";
+    try {
+      pendingReceipt = await compressImageFile(file, 1000, 0.7);
+      showReceiptPreview(pendingReceipt);
+      statusEl.textContent = "";
+    } catch {
+      statusEl.textContent = "Impossible de lire cette photo, réessaie.";
+    }
+  });
+
+  document.getElementById("removeReceipt").addEventListener("click", clearReceiptPreview);
+
   document.getElementById("saveTrip").addEventListener("click", () => {
     const distanceVal = parseFloat(calcEls.distance.value) || 0;
     if (distanceVal <= 0) {
@@ -759,9 +832,24 @@
       rateMode: settings.rateMode,
       rate: settings.rateMode === "fixed" ? settings.rate : null,
       fiscalPower: settings.rateMode === "baremeFiscal" ? settings.fiscalPower : null,
+      receipt: pendingReceipt,
     };
     trips.push(trip);
-    saveTripsToStorage(trips);
+    let saved = saveTripsToStorage(trips);
+    let receiptDropped = false;
+    if (!saved && trip.receipt) {
+      trip.receipt = null; // libère de la place : on garde le trajet, pas la photo
+      receiptDropped = true;
+      saved = saveTripsToStorage(trips);
+    }
+    if (!saved) {
+      trips.pop();
+      alert("Stockage plein : impossible d'enregistrer ce trajet. Supprime d'anciens trajets ou tickets pour libérer de la place.");
+      return;
+    }
+    if (receiptDropped) {
+      alert("Trajet enregistré, mais la photo du ticket n'a pas pu être conservée (stockage plein).");
+    }
 
     calcEls.label.value = "";
     calcEls.distance.value = "";
@@ -769,6 +857,7 @@
     stops = [{ id: cryptoId(), value: "" }, { id: cryptoId(), value: "" }];
     renderStops();
     clearAutoStatus();
+    clearReceiptPreview();
     computeCurrent();
 
     switchTab("history");
@@ -797,7 +886,7 @@
           return `<div class="trip-card" data-id="${t.id}">
             <div class="trip-card-top">
               <div>
-                <div class="trip-card-title">${escapeHtml(t.label) || "Trajet"}</div>
+                <div class="trip-card-title">${escapeHtml(t.label) || "Trajet"}${t.receipt ? ' <svg class="icon-inline receipt-badge" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" title="Ticket joint"><path d="M4 7h3l2-3h6l2 3h3a1 1 0 011 1v11a1 1 0 01-1 1H4a1 1 0 01-1-1V8a1 1 0 011-1z"/><circle cx="12" cy="13" r="3.5"/></svg>' : ""}</div>
                 <div class="trip-card-date">${t.date}</div>
               </div>
               <div class="trip-card-balance ${balClass}">${(t.balance >= 0 ? "+" : "") + fmtEur(t.balance)}</div>
@@ -888,6 +977,58 @@
       })
       .join("");
   }
+
+  // ---------- Onglet Tickets ----------
+  function renderTicketGrid() {
+    const grid = document.getElementById("ticketGrid");
+    const withReceipt = [...trips].filter((t) => t.receipt).sort((a, b) => (a.date < b.date ? 1 : -1));
+    if (!withReceipt.length) {
+      grid.innerHTML = `<p class="hint empty-hint">Aucun ticket enregistré pour le moment.</p>`;
+      return;
+    }
+    grid.innerHTML = withReceipt
+      .map(
+        (t) => `<button type="button" class="ticket-thumb" data-id="${t.id}">
+          <img src="${t.receipt}" alt="Ticket du ${t.date}">
+          <span class="ticket-thumb-date">${t.date}</span>
+        </button>`
+      )
+      .join("");
+    grid.querySelectorAll(".ticket-thumb").forEach((btn) => {
+      btn.addEventListener("click", () => openTicketViewer(btn.dataset.id));
+    });
+  }
+
+  function openTicketViewer(tripId) {
+    const t = trips.find((tr) => tr.id === tripId);
+    if (!t || !t.receipt) return;
+    document.getElementById("ticketViewerImg").src = t.receipt;
+    document.getElementById("ticketViewerInfo").textContent =
+      `${escapeHtml(t.label) || "Trajet"} · ${t.date} · ${fmtEur(t.fuelCost)} de carburant`;
+    const viewer = document.getElementById("ticketViewer");
+    viewer.dataset.tripId = tripId;
+    viewer.hidden = false;
+  }
+
+  function closeTicketViewer() {
+    document.getElementById("ticketViewer").hidden = true;
+  }
+
+  document.getElementById("ticketViewerClose").addEventListener("click", closeTicketViewer);
+  document.getElementById("ticketViewer").addEventListener("click", (e) => {
+    if (e.target.id === "ticketViewer") closeTicketViewer();
+  });
+  document.getElementById("ticketViewerDelete").addEventListener("click", () => {
+    const tripId = document.getElementById("ticketViewer").dataset.tripId;
+    const t = trips.find((tr) => tr.id === tripId);
+    if (t && confirm("Supprimer ce ticket ? Le trajet associé est conservé.")) {
+      t.receipt = null;
+      saveTripsToStorage(trips);
+      closeTicketViewer();
+      renderTicketGrid();
+      renderHistory();
+    }
+  });
 
   function duplicateTrip(t) {
     calcEls.label.value = t.label || "";
