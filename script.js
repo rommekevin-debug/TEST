@@ -941,6 +941,7 @@
 
     renderMonthlyReport();
     renderClientReport();
+    updateExportRangeHint();
   }
 
   // ---------- Comparatif par client/motif ----------
@@ -1134,14 +1135,37 @@
     }
   });
 
+  // ---------- Export : sélection de période ----------
+  function getExportTrips() {
+    const from = document.getElementById("exportFrom").value;
+    const to = document.getElementById("exportTo").value;
+    return trips
+      .filter((t) => (!from || t.date >= from) && (!to || t.date <= to))
+      .sort((a, b) => (a.date < b.date ? -1 : 1));
+  }
+
+  function updateExportRangeHint() {
+    const hint = document.getElementById("exportRangeHint");
+    const count = getExportTrips().length;
+    hint.textContent =
+      count === 0
+        ? "Aucun trajet sur cette période."
+        : count > 1
+          ? `${count} trajets seront exportés (laisse les dates vides pour tout exporter).`
+          : "1 trajet sera exporté (laisse les dates vides pour tout exporter).";
+  }
+
+  document.getElementById("exportFrom").addEventListener("change", updateExportRangeHint);
+  document.getElementById("exportTo").addEventListener("change", updateExportRangeHint);
+
   document.getElementById("exportCsv").addEventListener("click", () => {
-    if (trips.length === 0) {
-      alert("Aucun trajet à exporter.");
+    const selected = getExportTrips();
+    if (selected.length === 0) {
+      alert("Aucun trajet à exporter sur cette période.");
       return;
     }
     const header = ["Date", "Client/Motif", "Vehicule", "Itineraire", "Retour au depart", "Distance (km)", "Cout carburant (EUR)", "Indemnite (EUR)", "Solde (EUR)", "CO2 (kg)"];
-    const rows = [...trips]
-      .sort((a, b) => (a.date < b.date ? -1 : 1))
+    const rows = selected
       .map((t) => [
         t.date,
         t.label,
@@ -1169,8 +1193,8 @@
   });
 
   document.getElementById("exportPdf").addEventListener("click", () => {
-    if (trips.length === 0) {
-      alert("Aucun trajet à exporter.");
+    if (getExportTrips().length === 0) {
+      alert("Aucun trajet à exporter sur cette période.");
       return;
     }
     buildPrintReport();
@@ -1178,11 +1202,11 @@
   });
 
   function buildPrintReport() {
-    const sorted = [...trips].sort((a, b) => (a.date < b.date ? -1 : 1));
-    const totalDistance = trips.reduce((s, t) => s + t.distance, 0);
-    const totalFuel = trips.reduce((s, t) => s + t.fuelCost, 0);
-    const totalReimb = trips.reduce((s, t) => s + t.reimb, 0);
-    const totalCo2 = trips.reduce((s, t) => s + (t.co2 || 0), 0);
+    const sorted = getExportTrips();
+    const totalDistance = sorted.reduce((s, t) => s + t.distance, 0);
+    const totalFuel = sorted.reduce((s, t) => s + t.fuelCost, 0);
+    const totalReimb = sorted.reduce((s, t) => s + t.reimb, 0);
+    const totalCo2 = sorted.reduce((s, t) => s + (t.co2 || 0), 0);
     const totalBalance = totalReimb - totalFuel;
     const period = sorted.length ? `${sorted[0].date} → ${sorted[sorted.length - 1].date}` : "";
 
@@ -1209,7 +1233,7 @@
           <tbody>${rows}</tbody>
         </table>
         <div class="print-totals">
-          <div><strong>Nombre de trajets :</strong> ${trips.length}</div>
+          <div><strong>Nombre de trajets :</strong> ${sorted.length}</div>
           <div><strong>Distance totale :</strong> ${fmtKm(totalDistance)}</div>
           <div><strong>Coût carburant total :</strong> ${fmtEur(totalFuel)}</div>
           <div><strong>Indemnités totales :</strong> ${fmtEur(totalReimb)}</div>
