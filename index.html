@@ -191,6 +191,16 @@
         </div>
       </div>
 
+      <div class="card" id="clientReportCard">
+        <h2><span class="pro-pill">PRO</span>Comparatif par client</h2>
+        <p class="hint">Trajets regroupés par client/motif, du moins rentable au plus rentable — repère en un coup d'œil les déplacements qui te coûtent plus qu'ils ne rapportent.</p>
+        <div id="clientList" class="month-list"></div>
+        <div class="pro-lock" id="clientReportLock" hidden>
+          <p class="hint">Le comparatif par client est réservé à ProKil Pro.</p>
+          <button type="button" class="btn primary pro-lock-btn">Débloquer ProKil Pro</button>
+        </div>
+      </div>
+
       <div class="card">
         <h2>Trajets enregistrés</h2>
         <p class="hint" id="historyLimitNotice" hidden></p>
@@ -205,11 +215,13 @@
       <div class="card pro-card" id="proCard">
         <h2>ProKil Pro</h2>
         <div id="proStatusFree">
-          <p class="hint">Historique illimité, rapport mensuel avec graphique, barème fiscal personnalisable.</p>
+          <p class="hint">Historique illimité, rapport mensuel, barème personnalisable, multi-véhicules et comparatif par client.</p>
           <ul class="pro-benefits">
             <li>Historique de trajets illimité (gratuit : 15 derniers trajets)</li>
             <li>Rapport mensuel avec graphique de solde</li>
             <li>Barème fiscal personnalisable</li>
+            <li>Multi-véhicules illimité (gratuit : 1 véhicule)</li>
+            <li>Comparatif de rentabilité par client/motif</li>
           </ul>
           <button type="button" class="btn primary" id="startProTrial">Essayer 3 jours gratuits</button>
           <p class="hint" id="proPriceHint"></p>
@@ -233,11 +245,16 @@
       <div class="card">
         <h2>Véhicules</h2>
         <p class="hint">Le véhicule actif est utilisé par défaut pour chaque nouveau trajet ; choisis un autre véhicule directement sur l'écran Calculateur si besoin.</p>
+        <p class="hint" id="vehicleLimitHint"></p>
         <div id="vehicleList"></div>
         <button type="button" class="btn dashed" id="addVehicle">
           <svg class="icon-inline" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
           Ajouter un véhicule
         </button>
+        <div class="pro-lock" id="vehicleLock" hidden>
+          <p class="hint">Un seul véhicule est inclus dans la version gratuite.</p>
+          <button type="button" class="btn primary pro-lock-btn">Débloquer ProKil Pro</button>
+        </div>
       </div>
 
       <div class="card">

@@ -168,6 +168,14 @@
     document.getElementById("baremeTableWrap").classList.toggle("locked", !isPremium);
     document.getElementById("resetBareme").disabled = !isPremium;
 
+    document.getElementById("clientReportLock").hidden = isPremium;
+    document.getElementById("clientList").classList.toggle("locked", !isPremium);
+
+    document.getElementById("vehicleLimitHint").textContent = isPremium
+      ? ""
+      : "Version gratuite : 1 véhicule. Passe à ProKil Pro pour en ajouter d'autres.";
+    if (isPremium) document.getElementById("vehicleLock").hidden = true;
+
     renderHistory();
   }
 
@@ -293,6 +301,12 @@
 
   document.getElementById("addVehicle").addEventListener("click", () => {
     const { vehicles } = readVehiclesFromForm();
+    if (!isPremium && vehicles.length >= 1) {
+      const lock = document.getElementById("vehicleLock");
+      lock.hidden = false;
+      lock.scrollIntoView({ behavior: "smooth", block: "center" });
+      return;
+    }
     settings.vehicles = vehicles;
     settings.vehicles.push({
       id: cryptoId(),
@@ -835,6 +849,44 @@
     sumBalBox.closest(".summary-box").classList.toggle("negative", totalBalance < 0);
 
     renderMonthlyReport();
+    renderClientReport();
+  }
+
+  // ---------- Comparatif par client/motif ----------
+  function getClientStats() {
+    const map = new Map();
+    trips.forEach((t) => {
+      const key = (t.label || "").trim() || "Sans motif";
+      if (!map.has(key)) map.set(key, { label: key, count: 0, distance: 0, fuelCost: 0, reimb: 0, balance: 0 });
+      const m = map.get(key);
+      m.count += 1;
+      m.distance += t.distance;
+      m.fuelCost += t.fuelCost;
+      m.reimb += t.reimb;
+      m.balance += t.balance;
+    });
+    return Array.from(map.values()).sort((a, b) => a.balance - b.balance);
+  }
+
+  function renderClientReport() {
+    const container = document.getElementById("clientList");
+    const stats = getClientStats();
+    if (!stats.length) {
+      container.innerHTML = `<p class="hint empty-hint">Pas encore de trajets à comparer.</p>`;
+      return;
+    }
+    container.innerHTML = stats
+      .map((s) => {
+        const cls = s.balance >= 0 ? "" : "negative";
+        return `<div class="month-row">
+          <div class="month-row-top">
+            <span class="month-row-label">${escapeHtml(s.label)}</span>
+            <span class="month-row-balance ${cls}">${(s.balance >= 0 ? "+" : "") + fmtEur(s.balance)}</span>
+          </div>
+          <div class="month-row-meta">${s.count} trajet${s.count > 1 ? "s" : ""} · ${fmtKm(s.distance)} · ${fmtEur(s.fuelCost)} carburant · ${fmtEur(s.reimb)} indemnité</div>
+        </div>`;
+      })
+      .join("");
   }
 
   function duplicateTrip(t) {
