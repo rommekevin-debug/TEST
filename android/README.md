@@ -6,10 +6,10 @@ Ce dossier contient la config prête à l'emploi (`twa-manifest.json`). Les éta
 
 ## 0. Prérequis (une seule fois)
 
-- [Node.js](https://nodejs.org/) installé sur ton ordinateur.
-- Un JDK 17 installé.
 - Un compte [Google Play Console](https://play.google.com/console) (25 $, paiement unique, vérification d'identité requise par Google).
 - Le site publié et accessible en HTTPS sur GitHub Pages (voir plus bas : `https://rommekevin-debug.github.io/TEST/`).
+- **Si tu as un ordinateur** : [Node.js](https://nodejs.org/) + un JDK 17, pour utiliser Bubblewrap (étapes 3-5 ci-dessous).
+- **Si tu n'as qu'un téléphone/tablette Android** : aucun outil à installer, tout se fait depuis un navigateur — va directement à la section **"Pas d'ordinateur ? Publier depuis un téléphone Android"** plus bas, qui remplace les étapes 2 à 5.
 
 ## 1. Activer GitHub Pages (une fois la PR fusionnée sur `main`)
 
@@ -47,6 +47,24 @@ bubblewrap build
 
 Ça produit un fichier `app-release-bundle.aab`, signé avec ta clé — c'est le fichier à uploader sur le Play Store.
 
+## Pas d'ordinateur ? Publier depuis un téléphone Android
+
+Tu peux faire tout le processus (sans Bubblewrap, sans terminal) avec **[PWABuilder](https://www.pwabuilder.com)**, un outil web gratuit de Microsoft qui fait exactement le même travail que Bubblewrap mais entièrement via navigateur — y compris depuis le navigateur Chrome de ton téléphone. Ça remplace les étapes 2 à 5 ci-dessus.
+
+1. Ouvre **pwabuilder.com** dans Chrome sur ton téléphone.
+2. Colle l'adresse de ton appli : `https://rommekevin-debug.github.io/TEST/` et lance l'analyse. PWABuilder doit détecter le manifest et le service worker automatiquement (icônes, nom "ProKil", etc.).
+3. Une fois l'analyse terminée, va dans l'onglet **"Package for stores"** (ou "Publish") puis choisis **Android**.
+4. Dans les options du package Android :
+   - **Package ID** : mets `com.prokil.app` (ou l'identifiant que tu auras choisi — impossible à changer après la première publication sur le Store).
+   - **Signing key** : choisis **"Create new signing key"** — PWABuilder génère la clé à ta place et te permet de **télécharger le `.keystore`**. Sauvegarde-le précieusement (par exemple dans ton Drive ou ailleurs en lieu sûr) : sans lui, impossible de mettre à jour l'appli plus tard.
+   - Les autres champs (nom, couleur, icônes) sont déjà préremplis depuis le manifest de l'appli — tu peux les laisser tels quels.
+5. Lance la génération : PWABuilder te renvoie un fichier `.zip` contenant le `.aab` signé (Android App Bundle) ainsi que le fichier `assetlinks.json` à publier.
+6. Télécharge le `.zip` sur ton téléphone, ouvre-le avec une appli de gestion de fichiers pour en extraire le `.aab` et le `assetlinks.json`.
+7. Mets à jour `/.well-known/assetlinks.json` à la racine du dépôt GitHub avec le contenu généré par PWABuilder (tu peux éditer le fichier directement sur github.com depuis le navigateur du téléphone : ouvre le fichier dans le dépôt, bouton crayon "Edit", colle le contenu, puis "Commit changes" sur la branche `main`). C'est cette étape qui permet à l'appli de s'ouvrir en plein écran plutôt qu'avec une barre d'adresse visible.
+8. Le `.aab` téléchargé est le fichier à uploader dans la Play Console (étape 7 ci-dessous) — le site [play.google.com/console](https://play.google.com/console) fonctionne bien depuis un navigateur mobile pour créer la fiche et uploader le fichier.
+
+Le reste du processus (créer le compte développeur, configurer l'abonnement ProKil Pro, remplir la fiche store) se fait entièrement sur le site de la Play Console, utilisable depuis un navigateur mobile.
+
 ## 6. Configurer l'abonnement ProKil Pro (Play Billing)
 
 L'appli propose un abonnement "ProKil Pro" (historique illimité, rapport mensuel, barème fiscal personnalisable) avec 3 jours d'essai gratuit, géré nativement par Google Play — aucun serveur à toi n'est impliqué, Google gère le paiement et la facturation.
@@ -68,4 +86,6 @@ L'appli propose un abonnement "ProKil Pro" (historique illimité, rapport mensue
 
 ## Mettre à jour l'appli plus tard
 
-À chaque changement du site, il suffit de pousser sur `main` (GitHub Pages se met à jour automatiquement). Si tu changes le contenu de l'appli TWA elle-même (rare), augmente `appVersionCode`/`appVersion` dans `twa-manifest.json`, relance `bubblewrap update` puis `bubblewrap build`, et uploade le nouvel `.aab` dans la Play Console.
+À chaque changement du site, il suffit de pousser sur `main` (GitHub Pages se met à jour automatiquement) — **rien à refaire côté Android** pour la plupart des changements (texte, style, fonctionnalités) puisque l'app charge le contenu en direct depuis GitHub Pages.
+
+Un nouveau `.aab` n'est nécessaire que si tu changes des réglages propres à l'enveloppe Android elle-même (icône, nom, couleur du thème, `packageId`...) — dans ce cas : augmente `appVersionCode`/`appVersion` dans `twa-manifest.json`, puis régénère le `.aab` (avec Bubblewrap : `bubblewrap update` puis `bubblewrap build` ; avec PWABuilder : relance le même processus sur pwabuilder.com en réutilisant ta clé de signature existante, option "Use existing signing key"), et uploade le nouveau fichier dans la Play Console.
