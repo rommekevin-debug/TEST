@@ -51,6 +51,10 @@
             <span>Client / Motif</span>
             <input type="text" id="tripLabel" placeholder="Ex: Tournée secteur Nord">
           </label>
+          <label class="field" id="vehicleSelectField" hidden>
+            <span>Véhicule</span>
+            <select id="tripVehicle"></select>
+          </label>
         </div>
       </div>
 
@@ -104,6 +108,10 @@
             <span class="result-label">Solde (indemnité - carburant)</span>
             <span class="result-value" id="resBalance">0,00 €</span>
           </div>
+          <div class="result-box">
+            <span class="result-label">Empreinte CO2</span>
+            <span class="result-value" id="resCo2">0,0 kg</span>
+          </div>
         </div>
         <p class="hint" id="calcHint"></p>
         <button class="btn light" id="saveTrip">
@@ -148,11 +156,19 @@
             <span class="result-label">Solde total</span>
             <span class="result-value" id="sumBalance">0,00 €</span>
           </div>
+          <div class="summary-box">
+            <span class="result-label">CO2 total</span>
+            <span class="result-value" id="sumCo2">0,0 kg</span>
+          </div>
         </div>
         <div class="actions-row">
           <button class="btn" id="exportCsv">
             <svg class="icon-inline" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0l-4-4m4 4l4-4M5 19h14"/></svg>
             Exporter en CSV
+          </button>
+          <button class="btn" id="exportPdf">
+            <svg class="icon-inline" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/><path d="M9 15h6M9 18h4"/></svg>
+            Exporter en PDF
           </button>
           <button class="btn danger" id="clearHistory">
             <svg class="icon-inline" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V5a2 2 0 012-2h2a2 2 0 012 2v2m2 0l-1 13a2 2 0 01-2 2H9a2 2 0 01-2-2L6 7"/></svg>
@@ -211,21 +227,17 @@
             <span>Prix actuel du carburant (€/L)</span>
             <input type="number" id="fuelPrice" min="0" step="0.001" placeholder="1.850">
           </label>
-          <label class="field">
-            <span>Type de carburant</span>
-            <select id="fuelType">
-              <option value="diesel">Diesel</option>
-              <option value="sp95">SP95</option>
-              <option value="sp98">SP98</option>
-              <option value="e10">E10</option>
-              <option value="electrique">Électrique (kWh)</option>
-            </select>
-          </label>
-          <label class="field">
-            <span>Consommation moyenne du véhicule (L/100km ou kWh/100km)</span>
-            <input type="number" id="conso" min="0" step="0.1" placeholder="6.5">
-          </label>
         </div>
+      </div>
+
+      <div class="card">
+        <h2>Véhicules</h2>
+        <p class="hint">Le véhicule actif est utilisé par défaut pour chaque nouveau trajet ; choisis un autre véhicule directement sur l'écran Calculateur si besoin.</p>
+        <div id="vehicleList"></div>
+        <button type="button" class="btn dashed" id="addVehicle">
+          <svg class="icon-inline" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+          Ajouter un véhicule
+        </button>
       </div>
 
       <div class="card">
@@ -281,13 +293,6 @@
       </div>
 
       <div class="card">
-        <h2>Profil véhicule</h2>
-        <div class="grid">
-          <label class="field">
-            <span>Nom du véhicule / plaque</span>
-            <input type="text" id="vehicleName" placeholder="Ex: Peugeot 308 - AB-123-CD">
-          </label>
-        </div>
         <button class="btn primary" id="saveSettings">
           <svg class="icon-inline" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg>
           Enregistrer les paramètres
@@ -302,6 +307,8 @@
     <p>ProKil — vos données restent stockées localement sur cet appareil.</p>
     <p>Calcul d'itinéraire : géocodage © contributeurs OpenStreetMap (Nominatim) · routage OSRM.</p>
   </footer>
+
+  <div id="printReport" class="print-only"></div>
 
   <div id="onboarding" class="onboarding-overlay" hidden>
     <div class="onboarding-card">

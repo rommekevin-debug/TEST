@@ -19,6 +19,8 @@
 
 * { box-sizing: border-box; }
 
+[hidden] { display: none !important; }
+
 body {
   margin: 0;
   font-family: "Barlow", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -479,6 +481,89 @@ main {
 }
 
 .empty-hint { text-align: center; padding: 1rem 0; }
+
+/* ---------- Véhicules ---------- */
+.vehicle-row {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  padding: 0.9rem 1rem;
+  margin-bottom: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.vehicle-row-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.vehicle-active {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.vehicle-active input[type="radio"] {
+  width: 1rem;
+  height: 1rem;
+  accent-color: var(--accent);
+}
+
+.vehicle-delete {
+  background: none;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 1rem;
+  padding: 0;
+}
+
+/* ---------- Historique : actions de trajet ---------- */
+.trip-card-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+}
+
+.trip-card-duplicate {
+  background: none;
+  border: none;
+  color: var(--accent);
+  cursor: pointer;
+  font-size: 0.75rem;
+  padding: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: 700;
+}
+
+/* ---------- Export PDF ---------- */
+.print-only { display: none; }
+
+@media print {
+  body > *:not(.print-only) { display: none !important; }
+  .print-only {
+    display: block !important;
+    background: #fff;
+    color: #111;
+    font-family: "Barlow", Arial, sans-serif;
+    padding: 0;
+  }
+  .print-report h1 { font-family: "Archivo Black", Arial, sans-serif; font-size: 20pt; margin: 0 0 4pt; }
+  .print-report .print-sub { color: #555; font-size: 10pt; margin: 0 0 18pt; }
+  .print-report table { width: 100%; border-collapse: collapse; font-size: 9pt; margin-bottom: 16pt; }
+  .print-report th, .print-report td { border: 1px solid #ccc; padding: 5pt 6pt; text-align: left; }
+  .print-report th { background: #f0f0f0; }
+  .print-report .print-totals { font-size: 10pt; margin-top: 8pt; }
+  .print-report .print-totals strong { display: inline-block; min-width: 160pt; }
+}
 
 /* ---------- ProKil Pro ---------- */
 .pro-pill {

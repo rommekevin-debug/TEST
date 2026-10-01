@@ -6,13 +6,27 @@
 
   const defaultSettings = {
     fuelPrice: 1.85,
-    fuelType: "diesel",
-    conso: 6.5,
     rateMode: "fixed",
     rate: 0.32,
     fiscalPower: "5",
-    vehicleName: "",
+    vehicles: [],
+    activeVehicleId: null,
   };
+
+  // kg de CO2 émis par litre de carburant consommé (indicatif) — pour
+  // l'électrique, kg de CO2 par kWh (moyenne du réseau électrique français).
+  const CO2_FACTORS = {
+    diesel: 2.68,
+    sp95: 2.28,
+    sp98: 2.28,
+    e10: 2.14,
+    electrique: 0.06,
+  };
+
+  function computeCo2(distance, fuelType, conso) {
+    const qty = distance * (conso / 100);
+    return qty * (CO2_FACTORS[fuelType] ?? CO2_FACTORS.diesel);
+  }
 
   // Barème kilométrique fiscal indicatif (voiture), à titre d'exemple.
   // Formule: montant(d) selon tranche de km annuel cumulé.
@@ -33,12 +47,40 @@
   }
 
   function loadSettings() {
+    let s;
     try {
       const raw = localStorage.getItem(STORAGE_SETTINGS);
-      return raw ? { ...defaultSettings, ...JSON.parse(raw) } : { ...defaultSettings };
+      s = raw ? { ...defaultSettings, ...JSON.parse(raw) } : { ...defaultSettings };
     } catch {
-      return { ...defaultSettings };
+      s = { ...defaultSettings };
     }
+    // Migration : les anciennes versions stockaient un seul véhicule à plat
+    // (fuelType/conso/vehicleName) directement dans les paramètres.
+    if (!s.vehicles || !s.vehicles.length) {
+      const migrated = {
+        id: cryptoId(),
+        name: s.vehicleName || "Véhicule principal",
+        fuelType: s.fuelType || "diesel",
+        conso: s.conso || 6.5,
+      };
+      s.vehicles = [migrated];
+      s.activeVehicleId = migrated.id;
+    }
+    if (!s.activeVehicleId || !s.vehicles.some((v) => v.id === s.activeVehicleId)) {
+      s.activeVehicleId = s.vehicles[0].id;
+    }
+    delete s.fuelType;
+    delete s.conso;
+    delete s.vehicleName;
+    return s;
+  }
+
+  function getVehicle(id) {
+    return settings.vehicles.find((v) => v.id === id) || settings.vehicles[0];
+  }
+
+  function getActiveVehicle() {
+    return getVehicle(settings.activeVehicleId);
   }
 
   function saveSettingsToStorage(s) {
@@ -176,17 +218,110 @@
   // ---------- Settings form ----------
   const els = {
     fuelPrice: document.getElementById("fuelPrice"),
-    fuelType: document.getElementById("fuelType"),
-    conso: document.getElementById("conso"),
     rateMode: document.getElementById("rateMode"),
     rate: document.getElementById("rate"),
     fiscalPower: document.getElementById("fiscalPower"),
-    vehicleName: document.getElementById("vehicleName"),
     fixedRateField: document.getElementById("fixedRateField"),
     powerField: document.getElementById("powerField"),
     baremeTableField: document.getElementById("baremeTableField"),
     baremeTableBody: document.getElementById("baremeTableBody"),
   };
+
+  const FUEL_TYPE_LABEL = { diesel: "Diesel", sp95: "SP95", sp98: "SP98", e10: "E10", electrique: "Électrique (kWh)" };
+
+  function fuelTypeOptions(selected) {
+    return Object.entries(FUEL_TYPE_LABEL)
+      .map(([value, label]) => `<option value="${value}" ${value === selected ? "selected" : ""}>${label}</option>`)
+      .join("");
+  }
+
+  function renderVehicleList() {
+    const list = document.getElementById("vehicleList");
+    list.innerHTML = settings.vehicles
+      .map(
+        (v) => `<div class="vehicle-row" data-id="${v.id}">
+          <div class="vehicle-row-top">
+            <label class="vehicle-active">
+              <input type="radio" name="activeVehicle" value="${v.id}" ${v.id === settings.activeVehicleId ? "checked" : ""}>
+              <span>Véhicule actif</span>
+            </label>
+            ${settings.vehicles.length > 1 ? `<button type="button" class="vehicle-delete" data-id="${v.id}" title="Supprimer ce véhicule">✕</button>` : ""}
+          </div>
+          <div class="grid">
+            <label class="field">
+              <span>Nom / plaque</span>
+              <input type="text" data-field="name" value="${escapeAttr(v.name)}" placeholder="Ex: Peugeot 308 - AB-123-CD">
+            </label>
+            <label class="field">
+              <span>Carburant</span>
+              <select data-field="fuelType">${fuelTypeOptions(v.fuelType)}</select>
+            </label>
+            <label class="field">
+              <span>Consommation (L/100km ou kWh/100km)</span>
+              <input type="number" step="0.1" data-field="conso" value="${v.conso}">
+            </label>
+          </div>
+        </div>`
+      )
+      .join("");
+
+    list.querySelectorAll(".vehicle-delete").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        settings.vehicles = settings.vehicles.filter((v) => v.id !== btn.dataset.id);
+        if (!settings.vehicles.some((v) => v.id === settings.activeVehicleId)) {
+          settings.activeVehicleId = settings.vehicles[0].id;
+        }
+        renderVehicleList();
+      });
+    });
+  }
+
+  function readVehiclesFromForm() {
+    const rows = document.querySelectorAll("#vehicleList .vehicle-row");
+    const vehicles = [];
+    let activeId = settings.activeVehicleId;
+    rows.forEach((row) => {
+      const id = row.dataset.id;
+      const name = row.querySelector('[data-field="name"]').value.trim() || "Véhicule";
+      const fuelType = row.querySelector('[data-field="fuelType"]').value;
+      const conso = parseFloat(row.querySelector('[data-field="conso"]').value) || 0;
+      vehicles.push({ id, name, fuelType, conso });
+      if (row.querySelector('input[name="activeVehicle"]').checked) activeId = id;
+    });
+    return { vehicles: vehicles.length ? vehicles : settings.vehicles, activeId };
+  }
+
+  document.getElementById("addVehicle").addEventListener("click", () => {
+    const { vehicles } = readVehiclesFromForm();
+    settings.vehicles = vehicles;
+    settings.vehicles.push({
+      id: cryptoId(),
+      name: `Véhicule ${settings.vehicles.length + 1}`,
+      fuelType: "diesel",
+      conso: 6.5,
+    });
+    renderVehicleList();
+  });
+
+  function updateVehicleSelector() {
+    const field = document.getElementById("vehicleSelectField");
+    const select = document.getElementById("tripVehicle");
+    if (settings.vehicles.length <= 1) {
+      field.hidden = true;
+      return;
+    }
+    field.hidden = false;
+    select.innerHTML = settings.vehicles
+      .map((v) => `<option value="${v.id}" ${v.id === settings.activeVehicleId ? "selected" : ""}>${escapeHtml(v.name)}</option>`)
+      .join("");
+  }
+
+  function getSelectedTripVehicle() {
+    const field = document.getElementById("vehicleSelectField");
+    const select = document.getElementById("tripVehicle");
+    if (!field.hidden && select.value) return getVehicle(select.value);
+    return getActiveVehicle();
+  }
 
   const BAREME_CVS = ["3", "4", "5", "6", "7"];
   const BAREME_CV_LABEL = { 3: "3 et -", 4: "4", 5: "5", 6: "6", 7: "7 et +" };
@@ -224,12 +359,10 @@
 
   function populateSettingsForm() {
     els.fuelPrice.value = settings.fuelPrice;
-    els.fuelType.value = settings.fuelType;
-    els.conso.value = settings.conso;
     els.rateMode.value = settings.rateMode;
     els.rate.value = settings.rate;
     els.fiscalPower.value = settings.fiscalPower;
-    els.vehicleName.value = settings.vehicleName;
+    renderVehicleList();
     renderBaremeTable(settings.bareme || BAREME);
     toggleRateFields();
   }
@@ -244,27 +377,29 @@
   els.rateMode.addEventListener("change", toggleRateFields);
 
   document.getElementById("saveSettings").addEventListener("click", () => {
+    const { vehicles, activeId } = readVehiclesFromForm();
     settings = {
       fuelPrice: parseFloat(els.fuelPrice.value) || 0,
-      fuelType: els.fuelType.value,
-      conso: parseFloat(els.conso.value) || 0,
       rateMode: els.rateMode.value,
       rate: parseFloat(els.rate.value) || 0,
       fiscalPower: els.fiscalPower.value,
-      vehicleName: els.vehicleName.value.trim(),
       bareme: readBaremeTable(),
+      vehicles,
+      activeVehicleId: activeId,
     };
     saveSettingsToStorage(settings);
     const msg = document.getElementById("settingsSaved");
     msg.textContent = "Paramètres enregistrés ✅";
     setTimeout(() => (msg.textContent = ""), 2500);
     updateQuickParams();
+    updateVehicleSelector();
     computeCurrent();
   });
 
   function updateQuickParams() {
+    const v = getActiveVehicle();
     document.getElementById("quickFuelPrice").textContent = settings.fuelPrice.toFixed(3) + " €";
-    document.getElementById("quickConso").textContent = settings.conso.toFixed(1);
+    document.getElementById("quickConso").textContent = v.conso.toFixed(1);
     const rateLabel =
       settings.rateMode === "fixed"
         ? settings.rate.toFixed(3) + " €"
@@ -554,13 +689,16 @@
 
   function computeCurrent() {
     const distance = parseFloat(calcEls.distance.value) || 0;
-    const fuelCost = distance * (settings.conso / 100) * settings.fuelPrice;
+    const vehicle = getSelectedTripVehicle();
+    const fuelCost = distance * (vehicle.conso / 100) * settings.fuelPrice;
     const reimb = computeReimbursement(distance, calcEls.date.value);
     const balance = reimb - fuelCost;
+    const co2 = computeCo2(distance, vehicle.fuelType, vehicle.conso);
 
     document.getElementById("resDistance").textContent = fmtKm(distance);
     document.getElementById("resFuelCost").textContent = fmtEur(fuelCost);
     document.getElementById("resReimb").textContent = fmtEur(reimb);
+    document.getElementById("resCo2").textContent = co2.toFixed(1) + " kg";
     const balBox = document.getElementById("resBalance");
     balBox.textContent = (balance >= 0 ? "+" : "") + fmtEur(balance);
     balBox.closest(".result-box").classList.toggle("negative", balance < 0);
@@ -572,13 +710,14 @@
       hint.textContent = "";
     }
 
-    return { distance, fuelCost, reimb, balance };
+    return { distance, fuelCost, reimb, balance, co2, vehicle };
   }
 
   ["input", "change"].forEach((evt) => {
     calcEls.distance.addEventListener(evt, computeCurrent);
     calcEls.date.addEventListener(evt, computeCurrent);
   });
+  document.getElementById("tripVehicle").addEventListener("change", computeCurrent);
 
   document.getElementById("saveTrip").addEventListener("click", () => {
     const distanceVal = parseFloat(calcEls.distance.value) || 0;
@@ -586,7 +725,7 @@
       alert("Merci d'indiquer une distance valide (saisie manuelle ou calcul automatique).");
       return;
     }
-    const { distance, fuelCost, reimb, balance } = computeCurrent();
+    const { distance, fuelCost, reimb, balance, co2, vehicle } = computeCurrent();
     const addresses = stops.map((s) => s.value.trim()).filter(Boolean);
     const trip = {
       id: cryptoId(),
@@ -598,8 +737,11 @@
       fuelCost,
       reimb,
       balance,
+      co2,
+      vehicleId: vehicle.id,
+      vehicleName: vehicle.name,
       fuelPrice: settings.fuelPrice,
-      conso: settings.conso,
+      conso: vehicle.conso,
       rateMode: settings.rateMode,
       rate: settings.rateMode === "fixed" ? settings.rate : null,
       fiscalPower: settings.rateMode === "baremeFiscal" ? settings.fiscalPower : null,
@@ -646,13 +788,17 @@
               </div>
               <div class="trip-card-balance ${balClass}">${(t.balance >= 0 ? "+" : "") + fmtEur(t.balance)}</div>
             </div>
-            <div class="trip-card-route">${escapeHtml(route) || "-"}</div>
+            <div class="trip-card-route">${escapeHtml(route) || "-"}${t.vehicleName && settings.vehicles.length > 1 ? ` · ${escapeHtml(t.vehicleName)}` : ""}</div>
             <div class="trip-card-meta">
               <span>${fmtKm(t.distance)}</span>
               <span>${fmtEur(t.fuelCost)} carburant</span>
               <span>${fmtEur(t.reimb)} indemnité</span>
+              <span>${(t.co2 || 0).toFixed(1)} kg CO2</span>
             </div>
-            <button class="trip-card-delete" data-id="${t.id}">Supprimer</button>
+            <div class="trip-card-actions">
+              <button class="trip-card-duplicate" data-id="${t.id}">Dupliquer</button>
+              <button class="trip-card-delete" data-id="${t.id}">Supprimer</button>
+            </div>
           </div>`;
         })
         .join("");
@@ -666,20 +812,47 @@
       });
     });
 
+    list.querySelectorAll(".trip-card-duplicate").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const trip = trips.find((t) => t.id === btn.dataset.id);
+        if (trip) duplicateTrip(trip);
+      });
+    });
+
     const totalDistance = trips.reduce((s, t) => s + t.distance, 0);
     const totalFuel = trips.reduce((s, t) => s + t.fuelCost, 0);
     const totalReimb = trips.reduce((s, t) => s + t.reimb, 0);
+    const totalCo2 = trips.reduce((s, t) => s + (t.co2 || 0), 0);
     const totalBalance = totalReimb - totalFuel;
 
     document.getElementById("sumCount").textContent = trips.length;
     document.getElementById("sumDistance").textContent = fmtKm(totalDistance);
     document.getElementById("sumFuel").textContent = fmtEur(totalFuel);
     document.getElementById("sumReimb").textContent = fmtEur(totalReimb);
+    document.getElementById("sumCo2").textContent = totalCo2.toFixed(1) + " kg";
     const sumBalBox = document.getElementById("sumBalance");
     sumBalBox.textContent = (totalBalance >= 0 ? "+" : "") + fmtEur(totalBalance);
     sumBalBox.closest(".summary-box").classList.toggle("negative", totalBalance < 0);
 
     renderMonthlyReport();
+  }
+
+  function duplicateTrip(t) {
+    calcEls.label.value = t.label || "";
+    calcEls.loopBack.checked = !!t.loopBack;
+    const addresses = t.stops && t.stops.length ? t.stops : ["", ""];
+    stops = addresses.map((addr) => ({ id: cryptoId(), value: addr }));
+    if (stops.length < 2) stops.push({ id: cryptoId(), value: "" });
+    renderStops();
+    calcEls.date.value = new Date().toISOString().slice(0, 10);
+    calcEls.distance.value = t.distance ? t.distance.toFixed(1) : "";
+    if (t.vehicleId && settings.vehicles.some((v) => v.id === t.vehicleId)) {
+      const select = document.getElementById("tripVehicle");
+      if (!document.getElementById("vehicleSelectField").hidden) select.value = t.vehicleId;
+    }
+    clearAutoStatus();
+    computeCurrent();
+    switchTab("calc");
   }
 
   // ---------- Rapport mensuel ----------
@@ -766,18 +939,20 @@
       alert("Aucun trajet à exporter.");
       return;
     }
-    const header = ["Date", "Client/Motif", "Itineraire", "Retour au depart", "Distance (km)", "Cout carburant (EUR)", "Indemnite (EUR)", "Solde (EUR)"];
+    const header = ["Date", "Client/Motif", "Vehicule", "Itineraire", "Retour au depart", "Distance (km)", "Cout carburant (EUR)", "Indemnite (EUR)", "Solde (EUR)", "CO2 (kg)"];
     const rows = [...trips]
       .sort((a, b) => (a.date < b.date ? -1 : 1))
       .map((t) => [
         t.date,
         t.label,
+        t.vehicleName || "",
         (t.stops || []).join(" -> "),
         t.loopBack ? "Oui" : "Non",
         t.distance.toFixed(1),
         t.fuelCost.toFixed(2),
         t.reimb.toFixed(2),
         t.balance.toFixed(2),
+        (t.co2 || 0).toFixed(1),
       ]);
     const csv = [header, ...rows]
       .map((r) => r.map((v) => `"${String(v ?? "").replace(/"/g, '""')}"`).join(";"))
@@ -792,6 +967,58 @@
     a.remove();
     URL.revokeObjectURL(url);
   });
+
+  document.getElementById("exportPdf").addEventListener("click", () => {
+    if (trips.length === 0) {
+      alert("Aucun trajet à exporter.");
+      return;
+    }
+    buildPrintReport();
+    window.print();
+  });
+
+  function buildPrintReport() {
+    const sorted = [...trips].sort((a, b) => (a.date < b.date ? -1 : 1));
+    const totalDistance = trips.reduce((s, t) => s + t.distance, 0);
+    const totalFuel = trips.reduce((s, t) => s + t.fuelCost, 0);
+    const totalReimb = trips.reduce((s, t) => s + t.reimb, 0);
+    const totalCo2 = trips.reduce((s, t) => s + (t.co2 || 0), 0);
+    const totalBalance = totalReimb - totalFuel;
+    const period = sorted.length ? `${sorted[0].date} → ${sorted[sorted.length - 1].date}` : "";
+
+    const rows = sorted
+      .map(
+        (t) => `<tr>
+          <td>${t.date}</td>
+          <td>${escapeHtml(t.label) || "-"}</td>
+          <td>${escapeHtml((t.stops || []).join(" → ")) || "-"}</td>
+          <td>${fmtKm(t.distance)}</td>
+          <td>${fmtEur(t.fuelCost)}</td>
+          <td>${fmtEur(t.reimb)}</td>
+          <td>${(t.balance >= 0 ? "+" : "") + fmtEur(t.balance)}</td>
+        </tr>`
+      )
+      .join("");
+
+    document.getElementById("printReport").innerHTML = `
+      <div class="print-report">
+        <h1>ProKil — Note de frais kilométriques</h1>
+        <p class="print-sub">Période : ${period} · Généré le ${new Date().toLocaleDateString("fr-FR")}</p>
+        <table>
+          <thead><tr><th>Date</th><th>Motif</th><th>Itinéraire</th><th>Distance</th><th>Carburant</th><th>Indemnité</th><th>Solde</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+        <div class="print-totals">
+          <div><strong>Nombre de trajets :</strong> ${trips.length}</div>
+          <div><strong>Distance totale :</strong> ${fmtKm(totalDistance)}</div>
+          <div><strong>Coût carburant total :</strong> ${fmtEur(totalFuel)}</div>
+          <div><strong>Indemnités totales :</strong> ${fmtEur(totalReimb)}</div>
+          <div><strong>Solde total :</strong> ${(totalBalance >= 0 ? "+" : "") + fmtEur(totalBalance)}</div>
+          <div><strong>Empreinte CO2 totale :</strong> ${totalCo2.toFixed(1)} kg</div>
+        </div>
+      </div>
+    `;
+  }
 
   // ---------- Onboarding ----------
   const ONBOARDING_KEY = "prokil_onboarded_v1";
@@ -879,6 +1106,7 @@
     calcEls.date.value = new Date().toISOString().slice(0, 10);
     populateSettingsForm();
     updateQuickParams();
+    updateVehicleSelector();
     renderStops();
     computeCurrent();
     updateProUI();
