@@ -784,7 +784,6 @@
     document.getElementById("addReceiptBtn").hidden = false;
     document.getElementById("receiptInput").value = "";
     document.getElementById("receiptStatus").textContent = "";
-    document.getElementById("receiptOcrStatus").textContent = "";
     document.getElementById("receiptAmount").value = "";
   }
 
@@ -796,62 +795,17 @@
     const file = e.target.files && e.target.files[0];
     if (!file) return;
     const statusEl = document.getElementById("receiptStatus");
-    const ocrEl = document.getElementById("receiptOcrStatus");
     statusEl.textContent = "Traitement de la photo...";
     try {
       pendingReceipt = await compressImageFile(file, 1000, 0.7);
       showReceiptPreview(pendingReceipt);
       statusEl.textContent = "";
-      runReceiptOcr(pendingReceipt, ocrEl);
     } catch {
       statusEl.textContent = "Impossible de lire cette photo, réessaie.";
     }
   });
 
   document.getElementById("removeReceipt").addEventListener("click", clearReceiptPreview);
-
-  // Lecture automatique du montant payé (OCR, entièrement dans le navigateur via Tesseract.js).
-  // Reste purement indicatif : le champ "Montant payé" demeure modifiable à tout moment.
-  function extractReceiptAmount(text) {
-    const moneyRegex = /(\d{1,4}[.,]\d{2})\s*€?/g;
-    const lines = text.split(/\r?\n/);
-    for (const line of lines) {
-      if (/total|montant|ttc|à payer|a payer|net a payer/i.test(line)) {
-        const matches = [...line.matchAll(moneyRegex)];
-        if (matches.length) {
-          const val = parseFloat(matches[matches.length - 1][1].replace(",", "."));
-          if (!isNaN(val) && val > 0 && val < 1000) return val;
-        }
-      }
-    }
-    const all = [...text.matchAll(moneyRegex)]
-      .map((m) => parseFloat(m[1].replace(",", ".")))
-      .filter((v) => !isNaN(v) && v > 0 && v < 1000);
-    return all.length ? Math.max(...all) : null;
-  }
-
-  async function runReceiptOcr(dataUrl, statusEl) {
-    if (typeof Tesseract === "undefined") {
-      statusEl.textContent = "(lecture automatique indisponible hors-ligne — saisis le montant toi-même)";
-      return;
-    }
-    statusEl.textContent = "Lecture automatique du ticket...";
-    try {
-      const result = await Promise.race([
-        Tesseract.recognize(dataUrl, "fra"),
-        new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), 20000)),
-      ]);
-      const amount = extractReceiptAmount(result.data.text || "");
-      if (amount) {
-        document.getElementById("receiptAmount").value = amount.toFixed(2);
-        statusEl.textContent = `détecté : ${fmtEur(amount)} (vérifie et corrige si besoin)`;
-      } else {
-        statusEl.textContent = "(montant non détecté — saisis-le toi-même)";
-      }
-    } catch {
-      statusEl.textContent = "(lecture automatique indisponible — saisis le montant toi-même)";
-    }
-  }
 
   document.getElementById("saveTrip").addEventListener("click", () => {
     const distanceVal = parseFloat(calcEls.distance.value) || 0;
