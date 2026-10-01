@@ -1,0 +1,63 @@
+name: Build Android App Bundle (Bubblewrap)
+
+# Déclenchement manuel uniquement : va dans l'onglet "Actions" du dépôt sur
+# GitHub (même depuis un téléphone), choisis ce workflow, puis "Run workflow".
+on:
+  workflow_dispatch:
+
+jobs:
+  build-aab:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Installer Bubblewrap
+        run: npm install -g @bubblewrap/cli
+
+      - name: Générer la clé de signature (une seule fois, à conserver précieusement)
+        working-directory: android
+        run: |
+          if [ ! -f android.keystore ]; then
+            keytool -genkeypair -v \
+              -keystore android.keystore \
+              -alias prokil \
+              -keyalg RSA -keysize 2048 -validity 10000 \
+              -storepass "${{ secrets.KEYSTORE_PASSWORD }}" \
+              -keypass "${{ secrets.KEYSTORE_PASSWORD }}" \
+              -dname "CN=ProKil, OU=Engineering, O=ProKil, L=Paris, S=IDF, C=FR"
+          fi
+
+      - name: Initialiser le projet Android (Bubblewrap)
+        working-directory: android
+        env:
+          BUBBLEWRAP_KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          BUBBLEWRAP_KEY_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+        run: |
+          yes "" | bubblewrap init --manifest ./twa-manifest.json --skipPwaValidation || true
+          ls -la
+
+      - name: Construire l'App Bundle (.aab)
+        working-directory: android
+        env:
+          BUBBLEWRAP_KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          BUBBLEWRAP_KEY_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+        run: bubblewrap build --skipPwaValidation
+
+      - name: Publier les fichiers générés
+        uses: actions/upload-artifact@v4
+        with:
+          name: prokil-android
+          path: |
+            android/app-release-bundle.aab
+            android/android.keystore
+          retention-days: 30
+          if-no-files-found: warn
