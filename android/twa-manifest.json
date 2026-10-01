@@ -20,7 +20,7 @@
   "shortcuts": [],
   "splashScreenFadeOutDuration": 300,
   "generatorApp": "manual",
-  "minSdkVersion": 21,
+  "minSdkVersion": 23,
   "appVersion": "1.0.0",
   "appVersionCode": 1,
   "features": {
