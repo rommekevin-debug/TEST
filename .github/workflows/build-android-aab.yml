@@ -30,6 +30,12 @@ jobs:
       - name: Installer Bubblewrap
         run: npm install -g @bubblewrap/cli
 
+      - name: Restaurer la clé de signature depuis le cache (si elle existe déjà)
+        uses: actions/cache@v4
+        with:
+          path: android/android.keystore
+          key: prokil-android-signing-keystore-v1
+
       - name: Générer la clé de signature (une seule fois, à conserver précieusement)
         working-directory: android
         run: |
