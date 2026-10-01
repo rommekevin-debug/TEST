@@ -18,6 +18,7 @@
   "iconUrl": "https://rommekevin-debug.github.io/TEST/icons/icon-512.png",
   "maskableIconUrl": "https://rommekevin-debug.github.io/TEST/icons/maskable-512.png",
   "shortcuts": [],
+  "splashScreenFadeOutDuration": 300,
   "generatorApp": "manual",
   "minSdkVersion": 21,
   "appVersion": "1.0.0",
