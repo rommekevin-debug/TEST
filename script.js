@@ -132,8 +132,10 @@ if ("serviceWorker" in navigator) {
 
   async function initBilling() {
     const startBtn = document.getElementById("startProTrial");
+    const hint = document.getElementById("proUnavailableHint");
     if (!("getDigitalGoodsService" in window)) {
-      document.getElementById("proUnavailableHint").hidden = false;
+      hint.hidden = false;
+      hint.textContent = "Digital Goods API indisponible dans ce navigateur (getDigitalGoodsService absent de window).";
       startBtn.disabled = true;
       updateProUI();
       return;
@@ -146,9 +148,10 @@ if ("serviceWorker" in navigator) {
           `${details[0].price.value} ${details[0].price.currency} / mois après l'essai de 3 jours — annulable à tout moment depuis Google Play.`;
       }
       await refreshProStatus();
-    } catch {
+    } catch (err) {
       digitalGoodsService = null;
-      document.getElementById("proUnavailableHint").hidden = false;
+      hint.hidden = false;
+      hint.textContent = "Erreur billing : " + (err && (err.message || err.name) ? (err.name + " — " + err.message) : String(err));
       startBtn.disabled = true;
       updateProUI();
     }
