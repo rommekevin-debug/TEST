@@ -135,7 +135,6 @@ if ("serviceWorker" in navigator) {
     const hint = document.getElementById("proUnavailableHint");
     if (!("getDigitalGoodsService" in window)) {
       hint.hidden = false;
-      hint.textContent = "Digital Goods API indisponible dans ce navigateur (getDigitalGoodsService absent de window).";
       startBtn.disabled = true;
       updateProUI();
       return;
@@ -144,14 +143,17 @@ if ("serviceWorker" in navigator) {
       digitalGoodsService = await window.getDigitalGoodsService("https://play.google.com/billing");
       const details = await digitalGoodsService.getDetails([PRO_SKU]);
       if (details && details[0]) {
+        const { value, currency } = details[0].price;
+        const price = new Intl.NumberFormat("fr-FR", { style: "currency", currency }).format(Number(value));
         document.getElementById("proPriceHint").textContent =
-          `${details[0].price.value} ${details[0].price.currency} / mois après l'essai de 3 jours — annulable à tout moment depuis Google Play.`;
+          `${price} / mois après l'essai de 3 jours — annulable à tout moment depuis Google Play.`;
       }
       await refreshProStatus();
     } catch (err) {
+      console.error("Play Billing indisponible :", err);
       digitalGoodsService = null;
       hint.hidden = false;
-      hint.textContent = "Erreur billing : " + (err && (err.message || err.name) ? (err.name + " — " + err.message) : String(err));
+      hint.textContent = "L'abonnement est momentanément indisponible. Vérifie que Chrome est installé et à jour, puis relance l'application.";
       startBtn.disabled = true;
       updateProUI();
     }
