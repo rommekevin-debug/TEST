@@ -61,6 +61,46 @@ jobs:
           sed -i 's/jcenter()/jcenter()\n        mavenCentral()/' build.gradle
           cat build.gradle
 
+      # Play Billing (Digital Goods API) ne fonctionne que si la TWA tourne dans
+      # Chrome. Par défaut, androidbrowserhelper ouvre la TWA dans le navigateur
+      # par défaut (ex. Samsung Internet), où l'achat échoue avec
+      # "clientAppUnavailable". On force Chrome quand il est installé ; la
+      # surcharge de createTwaLauncher() nécessite androidbrowserhelper >= 2.7.1.
+      - name: Forcer Chrome comme navigateur de la TWA (Play Billing)
+        working-directory: android
+        run: |
+          sed -i -E 's/(com\.google\.androidbrowserhelper:androidbrowserhelper:)[0-9.]+/\12.7.3/' app/build.gradle
+          grep -n "androidbrowserhelper" app/build.gradle
+          python3 - <<'PY'
+          import pathlib
+          p = pathlib.Path("app/src/main/java/com/prokil/app/LauncherActivity.java")
+          src = p.read_text()
+          override = '''
+              @Override
+              protected TwaLauncher createTwaLauncher() {
+                  String provider = null;
+                  try {
+                      android.content.pm.ApplicationInfo info =
+                              getPackageManager().getApplicationInfo("com.android.chrome", 0);
+                      if (info.enabled) {
+                          provider = "com.android.chrome";
+                      }
+                  } catch (android.content.pm.PackageManager.NameNotFoundException ignored) {
+                  }
+                  return new TwaLauncher(this, provider, SessionStore.makeSessionId(getTaskId()),
+                          new SharedPreferencesTokenStore(this));
+              }
+          '''
+          imports = ("import com.google.androidbrowserhelper.trusted.TwaLauncher;\n"
+                     "import com.google.androidbrowserhelper.trusted.SessionStore;\n"
+                     "import com.google.androidbrowserhelper.trusted.SharedPreferencesTokenStore;\n")
+          src = src.replace("import android.os.Bundle;\n", "import android.os.Bundle;\n" + imports, 1)
+          idx = src.rstrip().rfind("}")
+          src = src[:idx] + override + "}\n"
+          p.write_text(src)
+          print(src)
+          PY
+
       - name: Accepter les licences du SDK Android
         run: |
           SDKMGR="$ANDROID_HOME/bin/sdkmanager"

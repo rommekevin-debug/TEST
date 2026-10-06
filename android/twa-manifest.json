@@ -21,8 +21,8 @@
   "splashScreenFadeOutDuration": 300,
   "generatorApp": "manual",
   "minSdkVersion": 23,
-  "appVersion": "1.0.0",
-  "appVersionCode": 1,
+  "appVersion": "1.0.1",
+  "appVersionCode": 2,
   "features": {
     "locationDelegation": {
       "enabled": false
